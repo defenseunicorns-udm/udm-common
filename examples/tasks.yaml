@@ -1,0 +1,48 @@
+# Example UDS tasks file for use with udsmil-common shared workflows.
+#
+# The ci.yaml workflow calls `uds run lint` to produce a Witness attestation.
+# You must define a task named `lint` in your repo's tasks.yaml that runs
+# your linter(s). The task should exit non-zero on lint failures so the
+# workflow fails appropriately.
+#
+# Copy the relevant section below into your repo's tasks.yaml and adapt as needed.
+
+tasks:
+
+  # ---------------------------------------------------------------------------
+  # Python — Ruff
+  # https://docs.astral.sh/ruff/
+  # ---------------------------------------------------------------------------
+  - name: lint
+    description: "Lint Python source with Ruff"
+    actions:
+      - cmd: ruff check .
+
+  # ---------------------------------------------------------------------------
+  # Go — golangci-lint
+  # https://golangci-lint.run/
+  # ---------------------------------------------------------------------------
+  # - name: lint
+  #   description: "Lint Go source with golangci-lint"
+  #   actions:
+  #     - cmd: golangci-lint run ./...
+
+  # ---------------------------------------------------------------------------
+  # TypeScript / JavaScript — ESLint
+  # https://eslint.org/
+  # ---------------------------------------------------------------------------
+  # - name: lint
+  #   description: "Lint TypeScript source with ESLint"
+  #   actions:
+  #     - cmd: npx eslint .
+
+  # ---------------------------------------------------------------------------
+  # Monorepo — run linters per service
+  # Scope each linter to its service directory so failures are isolated.
+  # ---------------------------------------------------------------------------
+  # - name: lint
+  #   description: "Lint all services"
+  #   actions:
+  #     - cmd: ruff check services/api
+  #     - cmd: golangci-lint run ./services/worker/...
+  #     - cmd: npx eslint services/frontend
