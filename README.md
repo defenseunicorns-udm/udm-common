@@ -19,7 +19,7 @@ publishes Zarf packages to the UDS MIL registry.
 Reference actions and workflows from this repo using the full path and a ref:
 
 ```yaml
-uses: defenseunicorns-udm/udsmil-common/.github/actions/security-scan@main
+uses: defenseunicorns-udm/udsmil-common/.github/actions/security-scan@609a8ab12a0c5d82271c84591476ff14e4653df3
 ```
 
 ### Minimal CI workflow
@@ -33,7 +33,7 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4
-      - uses: defenseunicorns-udm/udsmil-common/.github/actions/uds-cli-setup@main
+      - uses: defenseunicorns-udm/udsmil-common/.github/actions/uds-cli-setup@609a8ab12a0c5d82271c84591476ff14e4653df3
       - uses: testifysec/witness-run-action@7aa15e327829f1f2a523365c564c948d5dde69dd
         with:
           step: lint
@@ -55,12 +55,12 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4
-      - uses: defenseunicorns-udm/udsmil-common/.github/actions/uds-cli-setup@main
+      - uses: defenseunicorns-udm/udsmil-common/.github/actions/uds-cli-setup@609a8ab12a0c5d82271c84591476ff14e4653df3
       - uses: actions/download-artifact@v4
         with:
           name: lint-artifacts
           path: .
-      - uses: defenseunicorns-udm/udsmil-common/.github/actions/security-scan@main
+      - uses: defenseunicorns-udm/udsmil-common/.github/actions/security-scan@609a8ab12a0c5d82271c84591476ff14e4653df3
         with:
           external-attestations: "lint-witness.json"
           olm-catalog: cat-api.uds-mil.us
@@ -75,8 +75,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      - uses: defenseunicorns-udm/udsmil-common/.github/actions/uds-cli-setup@main
-      - uses: defenseunicorns-udm/udsmil-common/.github/actions/publish@main
+      - uses: defenseunicorns-udm/udsmil-common/.github/actions/uds-cli-setup@609a8ab12a0c5d82271c84591476ff14e4653df3
+      - uses: defenseunicorns-udm/udsmil-common/.github/actions/publish@609a8ab12a0c5d82271c84591476ff14e4653df3
         with:
           registry: registry.uds-mil.us
           registry-org: <your-org-name>
@@ -95,7 +95,7 @@ jobs:
       matrix:
         service: [api, worker, frontend]
     steps:
-      - uses: defenseunicorns-udm/udsmil-common/.github/actions/security-scan@main
+      - uses: defenseunicorns-udm/udsmil-common/.github/actions/security-scan@609a8ab12a0c5d82271c84591476ff14e4653df3
         with:
           zarf-path: services/${{ matrix.service }}
           opengrep-scan-path: services/${{ matrix.service }}

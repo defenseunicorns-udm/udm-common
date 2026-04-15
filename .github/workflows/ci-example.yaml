@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v6.0.2
 
       - name: UDS CLI Setup
-        uses: ./.github/actions/uds-cli-setup
+        uses: defenseunicorns-udm/udsmil-common/.github/actions/uds-cli-setup@609a8ab12a0c5d82271c84591476ff14e4653df3
 
       # Lint logic is owned by the calling repo via a UDS task.
       # Define a 'lint' task in your tasks.yaml that runs your linter(s).
@@ -31,7 +31,7 @@ jobs:
           step: lint
           enable-archivista: false
           enable-sigstore: true
-          command: uds run lint
+          command: uds run lint:all
           outfile: lint-witness.json
 
       - name: Upload lint artifacts
@@ -52,7 +52,7 @@ jobs:
         uses: actions/checkout@v6.0.2
 
       - name: UDS CLI Setup
-        uses: ./.github/actions/uds-cli-setup
+        uses: defenseunicorns-udm/udsmil-common/.github/actions/uds-cli-setup@609a8ab12a0c5d82271c84591476ff14e4653df3
 
       - name: Download lint artifacts
         uses: actions/download-artifact@v8.0.1
@@ -61,7 +61,7 @@ jobs:
           path: .
 
       - name: Security Scan and Vouch
-        uses: ./.github/actions/security-scan
+        uses: defenseunicorns-udm/udsmil-common/.github/actions/security-scan@609a8ab12a0c5d82271c84591476ff14e4653df3
         with:
           external-attestations: "lint-witness.json"
           olm-catalog: cat-api.uds-mil.us
@@ -79,10 +79,10 @@ jobs:
         uses: actions/checkout@v6.0.2
 
       - name: UDS CLI Setup
-        uses: ./.github/actions/uds-cli-setup
+        uses: defenseunicorns-udm/udsmil-common/.github/actions/uds-cli-setup@609a8ab12a0c5d82271c84591476ff14e4653df3
 
       - name: Publish
-        uses: ./.github/actions/publish
+        uses: defenseunicorns-udm/udsmil-common/.github/actions/publish@609a8ab12a0c5d82271c84591476ff14e4653df3
         with:
           registry: registry.uds-mil.us
           registry-org: uds-army-demo
