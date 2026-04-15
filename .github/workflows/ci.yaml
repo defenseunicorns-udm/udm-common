@@ -91,5 +91,5 @@ jobs:
         with:
           registry: ${{ secrets.REGISTRY_URL }}
           registry-org: ${{ secrets.REGISTRY_ORG }}
-          registry-user-id: ${{ secrets.DEMO_ORG_USER_ID }}
-          registry-password: ${{ secrets.DEMO_ORG_PASSWORD }}
+          registry-user-id: ${{ secrets.REGISTRY_USER_ID }}
+          registry-password: ${{ secrets.REGISTRY_PASSWORD }}
