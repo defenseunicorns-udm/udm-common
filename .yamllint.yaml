@@ -1,16 +1,39 @@
 extends: default
+yaml-files:
+  - "**/*.y*ml"
+  - .yamllint
+
+ignore:
+  - src/nginx/
+  - chart/templates/
 
 rules:
-  # GitHub Actions files frequently have long lines (commands, URLs, expressions)
-  line-length:
-    max: 150
+  anchors: enable
+  braces: enable
+  brackets: enable
+  colons: enable
+  commas: enable
+  comments:
     level: warning
-
-  # GitHub Actions uses 'true'/'false' as both booleans and strings
+  comments-indentation:
+    level: warning
+  document-end: disable
+  document-start:
+    level: warning
+  empty-lines: enable
+  empty-values: disable
+  float-values: disable
+  hyphens: enable
+  indentation: enable
+  key-duplicates: enable
+  key-ordering: disable
+  line-length: disable
+  new-line-at-end-of-file: enable
+  new-lines: enable
+  octal-values: disable
+  quoted-strings:
+    required: only-when-needed
+    quote-type: double
+  trailing-spaces: enable
   truthy:
-    allowed-values: ['true', 'false']
-
-  # Two-space indentation is standard for GitHub Actions YAML
-  indentation:
-    spaces: 2
-    indent-sequences: true
+    level: warning
