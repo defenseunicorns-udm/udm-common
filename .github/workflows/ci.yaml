@@ -70,7 +70,7 @@ jobs:
         with:
           attestations: ${{ steps.scan.outputs.witness-files }},lint-witness.json
           sarif-files: ${{ steps.scan.outputs.sarif-files }}
-          olm-catalog: ${{ vars.OLM_CATALOG }}
-          olm-org: ${{ vars.OLM_ORG }}
+          olm-catalog: ${{ secrets.OLM_CATALOG }}
+          olm-org: ${{ secrets.OLM_ORG }}
           olm-user-id: ${{ secrets.OLM_USER_ID }}
           olm-password: ${{ secrets.OLM_PASSWORD }}
