@@ -74,3 +74,22 @@ jobs:
           olm-org: ${{ secrets.OLM_ORG }}
           olm-user-id: ${{ secrets.OLM_USER_ID }}
           olm-password: ${{ secrets.OLM_PASSWORD }}
+  publish:
+    needs: scan-and-vouch
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6.0.2
+
+      - name: UDS CLI Setup
+        uses: ./.github/actions/uds-cli-setup
+
+      - name: Publish
+        uses: ./.github/actions/publish
+        with:
+          registry: ${{ secrets.REGISTRY_URL }}
+          registry-org: ${{ secrets.REGISTRY_ORG }}
+          registry-user-id: ${{ secrets.DEMO_ORG_USER_ID }}
+          registry-password: ${{ secrets.DEMO_ORG_PASSWORD }}
