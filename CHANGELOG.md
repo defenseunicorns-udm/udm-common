@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## 1.0.0 (2026-04-17)
+## 0.1.0 (2026-04-17) · 773bb3f554a729e901156bb35e5c343effd1bd47
 
 
 ### Features
@@ -17,8 +17,6 @@ All notable changes to this project will be documented in this file.
 * initialize release workflow and baseline v0.1.0 features ([773bb3f](https://github.com/defenseunicorns-udm/udm-common/commit/773bb3f554a729e901156bb35e5c343effd1bd47))
 * split security-scan into separate security-scan and vouch actions ([012f62f](https://github.com/defenseunicorns-udm/udm-common/commit/012f62f517f006049b24f66437c7d794e392cfbd))
 * split security-scan into separate security-scan and vouch actions ([a273058](https://github.com/defenseunicorns-udm/udm-common/commit/a2730584fd64a583104d89594f315fd398f7dec0))
-
-## [0.1.0] — 2026-04-17 · `773bb3f554a729e901156bb35e5c343effd1bd47`
 
 ### Added callable GitHub actions
 
