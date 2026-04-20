@@ -110,7 +110,69 @@ outputs:
     description: >
       Comma-separated list of GitOIDs stored in Archivista for this step's attestation.
       In the common case of a single attestation this is a single 64-character hex string.
+    value: ${{ steps.run-witness.outputs.git_oid }}
 
 runs:
-  using: node24
-  main: dist/index.js
+  using: composite
+  steps:
+    - name: Install cosign
+      # sigstore/cosign-installer v4.1.1
+      uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003
+
+    - name: Restore witness cache
+      id: cache
+      # actions/cache v5.0.5
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
+      with:
+        path: ${{ inputs.witness-install-dir || runner.temp }}/witness-bin
+        key: witness-${{ inputs.version }}-${{ runner.os }}-${{ runner.arch }}
+
+    - name: Download and verify witness
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        WITNESS_VERSION: ${{ inputs.version }}
+        WITNESS_CACHE_DIR: ${{ inputs.witness-install-dir || runner.temp }}/witness-bin
+        WITNESS_CERT_IDENTITY: ${{ inputs.cosign-certificate-identity }}
+        WITNESS_CERT_OIDC_ISSUER: ${{ inputs.cosign-certificate-oidc-issuer }}
+      run: ${{ github.action_path }}/scripts/download-verify.sh
+
+    - name: Verify cached witness integrity
+      if: steps.cache.outputs.cache-hit == 'true'
+      shell: bash
+      env:
+        WITNESS_CACHE_DIR: ${{ inputs.witness-install-dir || runner.temp }}/witness-bin
+      run: ${{ github.action_path }}/scripts/verify-cache.sh
+
+    - name: Run witness
+      id: run-witness
+      shell: bash
+      env:
+        WITNESS_VERSION: ${{ inputs.version }}
+        WITNESS_CACHE_DIR: ${{ inputs.witness-install-dir || runner.temp }}/witness-bin
+        WITNESS_COMMAND: ${{ inputs.command }}
+        WITNESS_STEP: ${{ inputs.step }}
+        WITNESS_WORKINGDIR: ${{ inputs.workingdir }}
+        WITNESS_OUTFILE: ${{ inputs.outfile }}
+        WITNESS_ATTESTATIONS: ${{ inputs.attestations }}
+        WITNESS_ENABLE_ARCHIVISTA: ${{ inputs.enable-archivista }}
+        WITNESS_ARCHIVISTA_SERVER: ${{ inputs.archivista-server }}
+        WITNESS_ARCHIVISTA_HEADERS: ${{ inputs.archivista-headers }}
+        WITNESS_CERTIFICATE: ${{ inputs.certificate }}
+        WITNESS_ENABLE_SIGSTORE: ${{ inputs.enable-sigstore }}
+        WITNESS_FULCIO: ${{ inputs.fulcio }}
+        WITNESS_FULCIO_OIDC_CLIENT_ID: ${{ inputs.fulcio-oidc-client-id }}
+        WITNESS_FULCIO_OIDC_ISSUER: ${{ inputs.fulcio-oidc-issuer }}
+        WITNESS_FULCIO_TOKEN: ${{ inputs.fulcio-token }}
+        WITNESS_INTERMEDIATES: ${{ inputs.intermediates }}
+        WITNESS_KEY: ${{ inputs.key }}
+        WITNESS_PRODUCT_EXCLUDE_GLOB: ${{ inputs.product-exclude-glob }}
+        WITNESS_PRODUCT_INCLUDE_GLOB: ${{ inputs.product-include-glob }}
+        WITNESS_SPIFFE_SOCKET: ${{ inputs.spiffe-socket }}
+        WITNESS_TIMESTAMP_SERVERS: ${{ inputs.timestamp-servers }}
+        WITNESS_TRACE: ${{ inputs.trace }}
+        WITNESS_EXPORT_LINK: ${{ inputs.attestor-link-export }}
+        WITNESS_EXPORT_SBOM: ${{ inputs.attestor-sbom-export }}
+        WITNESS_EXPORT_SLSA: ${{ inputs.attestor-slsa-export }}
+        WITNESS_MAVEN_POM: ${{ inputs.attestor-maven-pom-path }}
+      run: ${{ github.action_path }}/scripts/run.sh
