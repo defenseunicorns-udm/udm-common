@@ -20,7 +20,7 @@
       "matchStrings": [
         "uses: (?<depName>[\\w.-]+/[\\w.-]+)[^@\\n]*@(?<currentDigest>[a-f0-9]{40})(?:\\s*#\\s*(?<currentValue>\\S+))?"
       ],
-      "datasourceTemplate": "github-tags"
+      "datasourceTemplate": "github-releases"
     },
     {
       "customType": "regex",
@@ -29,13 +29,13 @@
       "matchStrings": [
         "uses: (?<depName>[\\w.-]+/[\\w.-]+)@(?<currentValue>v[\\d.]+)"
       ],
-      "datasourceTemplate": "github-tags"
+      "datasourceTemplate": "github-releases"
     }
   ],
   "packageRules": [
     {
-      "matchDepNames": ["defenseunicorns-udm/udsmil-common"],
-      "groupName": "udsmil-common self-references",
+      "matchDepNames": ["defenseunicorns-udm/udm-common"],
+      "groupName": "udm-common self-references",
       "automerge": false
     }
   ]
