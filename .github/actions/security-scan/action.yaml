@@ -9,7 +9,8 @@ inputs:
   opengrep-version:
     description: Version of OpenGrep to install
     required: false
-    default: v1.15.1
+    # renovate: datasource=github-releases depName=opengrep/opengrep
+    default: v1.19.0
   opengrep-scan-path:
     description: Path to scan with OpenGrep. Useful in monorepos to scope SAST to a specific service directory (e.g. 'services/api').
     required: false
@@ -17,7 +18,8 @@ inputs:
   gitleaks-version:
     description: Version of Gitleaks to install
     required: false
-    default: 8.30.0
+    # renovate: datasource=github-releases depName=gitleaks/gitleaks extractVersion=^v(?<version>.+)$
+    default: 8.30.1
 
 outputs:
   witness-files:
@@ -32,7 +34,7 @@ runs:
   steps:
 
     - name: Install Cosign
-      uses: sigstore/cosign-installer@v4.1.1
+      uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
 
     - name: Install OpenGrep
       if: ${{ inputs.run-opengrep == 'true' }}
