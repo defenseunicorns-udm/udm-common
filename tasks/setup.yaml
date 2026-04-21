@@ -99,6 +99,10 @@ tasks:
       verify_sigstore:
         description: Verify the witness binary with cosign before installing. Requires cosign on PATH or setup:cosign to have run first.
         default: "true"
+      cosign_version:
+        description: Version of cosign to install if not already on PATH and verify_sigstore is true (no v prefix)
+        # renovate: datasource=github-releases depName=sigstore/cosign extractVersion=^v(?<version>.+)$
+        default: 2.5.0
     actions:
       - description: Ensure cosign is available, then download and verify witness
         shell:
@@ -107,6 +111,7 @@ tasks:
         cmd: |
           VERSION=${{ .inputs.version }}
           VERIFY=${{ .inputs.verify_sigstore }}
+          COSIGN_VERSION=${{ .inputs.cosign_version }}
           INSTALL_DIR="$HOME/.local/bin"
           CACHE_DIR="$HOME/.cache/witness/${VERSION}"
           SIDECAR="${CACHE_DIR}/witness.sha256"
@@ -134,8 +139,6 @@ tasks:
               *) echo "Unsupported OS: $COSIGN_OS"; exit 1 ;;
             esac
             mkdir -p "$INSTALL_DIR"
-            # renovate: datasource=github-releases depName=sigstore/cosign extractVersion=^v(?<version>.+)$
-            COSIGN_VERSION=2.5.0
             curl -fSL \
               "https://github.com/sigstore/cosign/releases/download/v${COSIGN_VERSION}/${COSIGN_BIN}" \
               -o "$INSTALL_DIR/cosign"
