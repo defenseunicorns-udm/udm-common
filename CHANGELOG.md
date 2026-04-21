@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0](https://github.com/defenseunicorns-udm/udm-common/compare/v0.3.0...v0.4.0) (2026-04-21)
+
+
+### Features
+
+* fork witness run action ([dccbb00](https://github.com/defenseunicorns-udm/udm-common/commit/dccbb0046403c1b42bb6a3fe41f00f3ad42b4b65))
+
 ## [0.3.0](https://github.com/defenseunicorns-udm/udm-common/compare/v0.2.0...v0.3.0) (2026-04-20)
 
 
