@@ -38,6 +38,22 @@ jobs:
           name: lint-artifacts
           path: lint-witness.json
 
+  test-tasks:
+    needs: lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: UDS CLI Setup
+        uses: ./.github/actions/uds-cli-setup
+
+      - name: Run task integration tests
+        run: uds run test
+
   scan-and-vouch:
     needs: lint
     runs-on: ubuntu-latest
