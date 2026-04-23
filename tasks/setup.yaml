@@ -16,6 +16,14 @@ tasks:
           darwin: bash
         cmd: |
           VERSION=${{ .inputs.version }}
+          INSTALL_DIR="$HOME/.local/bin"
+          TARGET="$INSTALL_DIR/uds"
+
+          if [ -x "$TARGET" ] && "$TARGET" version 2>/dev/null | grep -qF "${VERSION#v}"; then
+            echo "uds ${VERSION} already installed"
+            exit 0
+          fi
+
           OS="$(uname -s)"
           ARCH="$(uname -m)"
 
@@ -37,13 +45,17 @@ tasks:
             *) echo "Unsupported OS: $OS"; exit 1 ;;
           esac
 
-          mkdir -p "$HOME/.local/bin"
+          mkdir -p "$INSTALL_DIR"
+          TMPFILE="$(mktemp -p "$INSTALL_DIR" uds-XXXXXX)"
+          # shellcheck disable=SC2064
+          trap "rm -f '$TMPFILE'" EXIT
           curl --retry-all-errors --retry 5 -fSL \
             "https://github.com/defenseunicorns/uds-cli/releases/download/${VERSION}/${BINARY}" \
-            -o "$HOME/.local/bin/uds"
-          chmod +x "$HOME/.local/bin/uds"
-          echo "UDS CLI ${VERSION} installed to \$HOME/.local/bin/uds"
-          echo "Ensure \$HOME/.local/bin is on your PATH."
+            -o "$TMPFILE"
+          chmod +x "$TMPFILE"
+          mv -f "$TMPFILE" "$TARGET"
+          echo "UDS CLI ${VERSION} installed to $TARGET"
+          echo "Ensure $INSTALL_DIR is on your PATH."
 
   - name: cosign
     description: Install cosign to $HOME/.local/bin if not already present
