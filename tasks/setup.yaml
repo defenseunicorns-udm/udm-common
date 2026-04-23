@@ -16,33 +16,12 @@ tasks:
           darwin: bash
         cmd: |
           VERSION=${{ .inputs.version }}
-          OS="$(uname -s)"
-          ARCH="$(uname -m)"
-
-          case "$OS" in
-            Linux)
-              case "$ARCH" in
-                x86_64)  BINARY="uds-cli_${VERSION}_Linux_amd64" ;;
-                aarch64) BINARY="uds-cli_${VERSION}_Linux_arm64" ;;
-                *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
-              esac
-              ;;
-            Darwin)
-              case "$ARCH" in
-                x86_64) BINARY="uds-cli_${VERSION}_Darwin_amd64" ;;
-                arm64)  BINARY="uds-cli_${VERSION}_Darwin_arm64" ;;
-                *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
-              esac
-              ;;
-            *) echo "Unsupported OS: $OS"; exit 1 ;;
-          esac
-
-          mkdir -p "$HOME/.local/bin"
-          curl --retry-all-errors --retry 5 -fSL \
-            "https://github.com/defenseunicorns/uds-cli/releases/download/${VERSION}/${BINARY}" \
-            -o "$HOME/.local/bin/uds"
-          chmod +x "$HOME/.local/bin/uds"
-          echo "UDS CLI ${VERSION} installed to \$HOME/.local/bin/uds"
+          # shellcheck source=scripts/install.sh
+          source scripts/install.sh
+          OS_CAP="$(get_os | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')"
+          ARCH="$(get_arch)"
+          install_binary uds \
+            "https://github.com/defenseunicorns/uds-cli/releases/download/${VERSION}/uds-cli_${VERSION}_${OS_CAP}_${ARCH}"
           echo "Ensure \$HOME/.local/bin is on your PATH."
 
   - name: cosign
@@ -63,31 +42,12 @@ tasks:
             exit 0
           fi
           VERSION=${{ .inputs.version }}
-          OS="$(uname -s)"
-          ARCH="$(uname -m)"
-          case "$OS" in
-            Linux)
-              case "$ARCH" in
-                x86_64)  BINARY="cosign-linux-amd64" ;;
-                aarch64) BINARY="cosign-linux-arm64" ;;
-                *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
-              esac
-              ;;
-            Darwin)
-              case "$ARCH" in
-                x86_64) BINARY="cosign-darwin-amd64" ;;
-                arm64)  BINARY="cosign-darwin-arm64" ;;
-                *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
-              esac
-              ;;
-            *) echo "Unsupported OS: $OS"; exit 1 ;;
-          esac
-          mkdir -p "$HOME/.local/bin"
-          curl -fSL \
-            "https://github.com/sigstore/cosign/releases/download/v${VERSION}/${BINARY}" \
-            -o "$HOME/.local/bin/cosign"
-          chmod +x "$HOME/.local/bin/cosign"
-          echo "cosign ${VERSION} installed to \$HOME/.local/bin/cosign"
+          # shellcheck source=scripts/install.sh
+          source scripts/install.sh
+          OS="$(get_os)"
+          ARCH="$(get_arch)"
+          install_binary cosign \
+            "https://github.com/sigstore/cosign/releases/download/v${VERSION}/cosign-${OS}-${ARCH}"
 
   - name: witness
     description: Download, verify, and install Witness CLI to $HOME/.local/bin. Uses a SHA256 cache to avoid re-downloading on repeat runs.

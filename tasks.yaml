@@ -2,6 +2,7 @@
 
 includes:
   - setup: ./tasks/setup.yaml
+  - scan: ./tasks/scan.yaml
 
 tasks:
 
@@ -146,6 +147,20 @@ tasks:
           uds run setup:witness --with verify_sigstore=false
           test -x "$HOME/.local/bin/witness" || { echo "FAIL: setup:witness did not install witness to \$HOME/.local/bin"; exit 1; }
           echo "PASS: setup:witness"
+
+          echo "==> Testing scan:install-gitleaks"
+          uds run scan:install-gitleaks
+          test -x "$HOME/.local/bin/gitleaks" || { echo "FAIL: scan:install-gitleaks did not install gitleaks to \$HOME/.local/bin"; exit 1; }
+          echo "PASS: scan:install-gitleaks"
+
+          echo "==> Testing scan:install-opengrep (Linux x86_64 only)"
+          if [ "$(uname -s)" = "Linux" ] && [ "$(uname -m)" = "x86_64" ]; then
+            uds run scan:install-opengrep
+            test -x "$HOME/.local/bin/opengrep" || { echo "FAIL: scan:install-opengrep did not install opengrep to \$HOME/.local/bin"; exit 1; }
+            echo "PASS: scan:install-opengrep"
+          else
+            echo "SKIP: scan:install-opengrep (not Linux x86_64)"
+          fi
 
           echo "All tests passed."
 
