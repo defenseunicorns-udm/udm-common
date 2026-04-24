@@ -193,12 +193,12 @@ tasks:
     actions:
       - description: Dry run tasks
         cmd: |
-          tasks=$(./uds run --list=md | tail -n +3 | awk -F '|' '{gsub("\\*\\*", "", $2); print $2}')
+          tasks=$(uds run --list=md | tail -n +3 | awk -F '|' '{gsub("\\*\\*", "", $2); print $2}')
 
           # Loop through each command and execute with --dry-run
           for task in $tasks; do
             printf "\n\033[0;36mChecking '\033[1;33m%s\033[0;36m' with --dry-run\033[0m\n" "$task"
-            ./uds run "$task" --dry-run
+            uds run "$task" --dry-run
           done
 
   - name: scan-and-vouch
@@ -255,8 +255,8 @@ tasks:
           set -euo pipefail
           export PATH="$HOME/.local/bin:$PATH"
 
-          EXTRA_ATTESTATIONS=${{ .inputs.extra_attestations }}
-          WITNESS_KEY_PATH=${{ .inputs.witness_key_path }}
+          EXTRA_ATTESTATIONS="${{ .inputs.extra_attestations }}"
+          WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
 
           uds run scan:security \
             --with gitleaks_scan_path="${{ .inputs.gitleaks_scan_path }}" \
@@ -265,16 +265,32 @@ tasks:
             --with witness_key_path="$WITNESS_KEY_PATH" \
             --with enable_sigstore="${{ .inputs.enable_sigstore }}" \
             --with enable_archivista="${{ .inputs.enable_archivista }}"
-          SARIF_FILES="gitleaks.sarif.json"
-          SCAN_ATTESTATIONS="gitleaks-witness.json"
+
+          SARIF_FILE_LIST=()
+          SCAN_ATTESTATION_LIST=()
+          if [ -s gitleaks.sarif.json ]; then
+            SARIF_FILE_LIST+=(gitleaks.sarif.json)
+          fi
+          if [ -s gitleaks-witness.json ]; then
+            SCAN_ATTESTATION_LIST+=(gitleaks-witness.json)
+          fi
           if [ "${{ .inputs.run_opengrep }}" = "true" ]; then
-            SARIF_FILES="${SARIF_FILES},opengrep.sarif.json"
-            SCAN_ATTESTATIONS="${SCAN_ATTESTATIONS},opengrep-witness.json"
+            if [ -s opengrep.sarif.json ]; then
+              SARIF_FILE_LIST+=(opengrep.sarif.json)
+            fi
+            if [ -s opengrep-witness.json ]; then
+              SCAN_ATTESTATION_LIST+=(opengrep-witness.json)
+            fi
           fi
 
-          ALL_EXTRA="${SCAN_ATTESTATIONS}"
+          SARIF_FILES=$(IFS=,; echo "${SARIF_FILE_LIST[*]}")
+          ALL_EXTRA=$(IFS=,; echo "${SCAN_ATTESTATION_LIST[*]}")
           if [ -n "$EXTRA_ATTESTATIONS" ]; then
-            ALL_EXTRA="${ALL_EXTRA},$EXTRA_ATTESTATIONS"
+            if [ -n "$ALL_EXTRA" ]; then
+              ALL_EXTRA="${ALL_EXTRA},$EXTRA_ATTESTATIONS"
+            else
+              ALL_EXTRA="$EXTRA_ATTESTATIONS"
+            fi
           fi
 
           uds run vouch:package \
@@ -285,6 +301,7 @@ tasks:
             --with github_token="${{ .inputs.github_token }}" \
             --with olm_catalog="${{ .inputs.olm_catalog }}" \
             --with olm_org="${{ .inputs.olm_org }}" \
+            --with witness_key_path="$WITNESS_KEY_PATH" \
             --with attestations="${ALL_EXTRA}" \
             --with sarif_files="${SARIF_FILES}" \
             --with enable_sigstore="${{ .inputs.enable_sigstore }}" \
@@ -302,6 +319,9 @@ tasks:
       run_opengrep:
         description: Whether to run OpenGrep SAST. Set to 'false' to skip.
         default: "true"
+      witness_key_path:
+        description: Path to a local signing key for Witness. Use for local runs when enable_sigstore=false. Leave empty in CI (Sigstore is used instead).
+        default: ""
       github_token:
         description: GitHub token for OLM CLI installation from GHCR. Pass secrets.GITHUB_TOKEN in CI. Leave empty locally.
         default: ""
@@ -354,6 +374,7 @@ tasks:
             --with gitleaks_scan_path="${{ .inputs.gitleaks_scan_path }}" \
             --with opengrep_scan_path="${{ .inputs.opengrep_scan_path }}" \
             --with run_opengrep="${{ .inputs.run_opengrep }}" \
+            --with witness_key_path="${{ .inputs.witness_key_path }}" \
             --with github_token="${{ .inputs.github_token }}" \
             --with olm_catalog="${{ .inputs.olm_catalog }}" \
             --with olm_org="${{ .inputs.olm_org }}" \

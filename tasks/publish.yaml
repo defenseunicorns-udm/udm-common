@@ -26,11 +26,32 @@ tasks:
           set -euo pipefail
           export PATH="$HOME/.local/bin:$PATH"
 
-          uds zarf tools registry login \
-            -u "${{ .inputs.registry_user_id }}" \
-            -p "${{ .inputs.registry_password }}" \
-            "${{ .inputs.registry }}"
+          REGISTRY="${{ .inputs.registry }}"
+          REGISTRY_ORG="${{ .inputs.registry_org }}"
+          REGISTRY_USER_ID="${{ .inputs.registry_user_id }}"
+          REGISTRY_PASSWORD="${{ .inputs.registry_password }}"
+
+          if [ -z "$REGISTRY" ]; then
+            echo "No registry configured. Skipping Zarf package publish for local run."
+            exit 0
+          fi
+
+          if [ -n "$REGISTRY_USER_ID" ] && [ -n "$REGISTRY_PASSWORD" ]; then
+            uds zarf tools registry login \
+              -u "$REGISTRY_USER_ID" \
+              -p "$REGISTRY_PASSWORD" \
+              "$REGISTRY"
+          fi
 
           PACKAGE=$(find . -maxdepth 1 -name "zarf-package-*.tar.zst" -type f | head -n 1)
+          if [ -z "$PACKAGE" ]; then
+            echo "No zarf-package-*.tar.zst file found to publish."
+            exit 1
+          fi
+
+          PUBLISH_DESTINATION="oci://${REGISTRY}"
+          if [ -n "$REGISTRY_ORG" ]; then
+            PUBLISH_DESTINATION="${PUBLISH_DESTINATION}/${REGISTRY_ORG}"
+          fi
           uds zarf package publish "$PACKAGE" \
-            "oci://${{ .inputs.registry }}/${{ .inputs.registry_org }}"
+            "$PUBLISH_DESTINATION"
