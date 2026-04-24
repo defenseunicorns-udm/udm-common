@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/defenseunicorns/maru-runner/refs/heads/main/tasks.schema.json
+
+tasks:
+
+  - name: zarf-package
+    description: Publish a Zarf package to an OCI registry
+    inputs:
+      registry:
+        description: OCI registry to publish to (e.g. registry.uds-mil.us)
+        default: ""
+      registry_org:
+        description: Organization path within the registry
+        default: ""
+      registry_user_id:
+        description: Registry username for publishing
+        default: ""
+      registry_password:
+        description: Registry password for publishing
+        default: ""
+    actions:
+      - description: Login to registry and publish Zarf package
+        shell:
+          linux: bash
+          darwin: bash
+        cmd: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+
+          uds zarf tools registry login \
+            -u "${{ .inputs.registry_user_id }}" \
+            -p "${{ .inputs.registry_password }}" \
+            "${{ .inputs.registry }}"
+
+          PACKAGE=$(find . -maxdepth 1 -name "zarf-package-*.tar.zst" -type f | head -n 1)
+          uds zarf package publish "$PACKAGE" \
+            "oci://${{ .inputs.registry }}/${{ .inputs.registry_org }}"

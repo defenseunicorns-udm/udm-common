@@ -3,6 +3,10 @@
 includes:
   - setup: ./tasks/setup.yaml
   - scan: ./tasks/scan.yaml
+  - build: ./tasks/build.yaml
+  - olm: ./tasks/olm.yaml
+  - vouch: ./tasks/vouch.yaml
+  - publish: ./tasks/publish.yaml
 
 tasks:
 
@@ -176,3 +180,175 @@ tasks:
             printf "\n\033[0;36mChecking '\033[1;33m%s\033[0;36m' with --dry-run\033[0m\n" "$task"
             ./uds run "$task" --dry-run
           done
+
+  - name: scan-and-vouch
+    description: Run security scans and vouch for the Zarf package
+    inputs:
+      gitleaks_scan_path:
+        description: Directory for Gitleaks to scan
+        default: .
+      opengrep_scan_path:
+        description: Path to scan with OpenGrep
+        default: .
+      run_opengrep:
+        description: Whether to run OpenGrep SAST. Set to 'false' to skip.
+        default: "true"
+      olm_catalog:
+        description: OLM catalog hostname
+        default: ""
+      olm_org:
+        description: OLM organization name
+        default: ""
+      olm_user_id:
+        description: OLM registry username
+        default: ""
+      olm_password:
+        description: OLM registry password
+        default: ""
+      zarf_path:
+        description: Path to the directory containing zarf.yaml
+        default: .
+      architecture:
+        description: Target architecture for the Zarf package
+        default: amd64
+      flavor:
+        description: Flavor for the Zarf package build
+        default: upstream
+      test_directory:
+        description: Path to the test directory to pass to olm vouch. Leave empty to skip.
+        default: tests
+      extra_attestations:
+        description: Comma-separated list of additional witness JSON attestation files to include in vouch
+        default: ""
+      enable_sigstore:
+        description: Sign attestations with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions).
+        default: "false"
+      enable_archivista:
+        description: Upload attestations to Archivista.
+        default: "false"
+    actions:
+      - description: Run security scans then vouch for Zarf package
+        shell:
+          linux: bash
+          darwin: bash
+        cmd: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+
+          uds run scan:security \
+            --with gitleaks_scan_path="${{ .inputs.gitleaks_scan_path }}" \
+            --with opengrep_scan_path="${{ .inputs.opengrep_scan_path }}" \
+            --with run_opengrep="${{ .inputs.run_opengrep }}" \
+            --with enable_sigstore="${{ .inputs.enable_sigstore }}" \
+            --with enable_archivista="${{ .inputs.enable_archivista }}"
+
+          EXTRA_ATTESTATIONS=${{ .inputs.extra_attestations }}
+          SARIF_FILES="gitleaks.sarif.json"
+          SCAN_ATTESTATIONS="gitleaks-witness.json"
+          if [ "${{ .inputs.run_opengrep }}" = "true" ]; then
+            SARIF_FILES="${SARIF_FILES},opengrep.sarif.json"
+            SCAN_ATTESTATIONS="${SCAN_ATTESTATIONS},opengrep-witness.json"
+          fi
+
+          ALL_EXTRA="${SCAN_ATTESTATIONS}"
+          if [ -n "$EXTRA_ATTESTATIONS" ]; then
+            ALL_EXTRA="${ALL_EXTRA},$EXTRA_ATTESTATIONS"
+          fi
+
+          uds run vouch:package \
+            --with zarf_path="${{ .inputs.zarf_path }}" \
+            --with architecture="${{ .inputs.architecture }}" \
+            --with flavor="${{ .inputs.flavor }}" \
+            --with test_directory="${{ .inputs.test_directory }}" \
+            --with olm_catalog="${{ .inputs.olm_catalog }}" \
+            --with olm_org="${{ .inputs.olm_org }}" \
+            --with olm_user_id="${{ .inputs.olm_user_id }}" \
+            --with olm_password="${{ .inputs.olm_password }}" \
+            --with attestations="${ALL_EXTRA}" \
+            --with sarif_files="${SARIF_FILES}" \
+            --with enable_sigstore="${{ .inputs.enable_sigstore }}" \
+            --with enable_archivista="${{ .inputs.enable_archivista }}"
+
+  - name: pipeline
+    description: Full local pipeline - scan, vouch, and publish
+    inputs:
+      gitleaks_scan_path:
+        description: Directory for Gitleaks to scan
+        default: .
+      opengrep_scan_path:
+        description: Path to scan with OpenGrep
+        default: .
+      run_opengrep:
+        description: Whether to run OpenGrep SAST. Set to 'false' to skip.
+        default: "true"
+      olm_catalog:
+        description: OLM catalog hostname
+        default: ""
+      olm_org:
+        description: OLM organization name
+        default: ""
+      olm_user_id:
+        description: OLM registry username
+        default: ""
+      olm_password:
+        description: OLM registry password
+        default: ""
+      registry:
+        description: OCI registry to publish to
+        default: ""
+      registry_org:
+        description: Organization path within the registry
+        default: ""
+      registry_user_id:
+        description: Registry username for publishing
+        default: ""
+      registry_password:
+        description: Registry password for publishing
+        default: ""
+      zarf_path:
+        description: Path to the directory containing zarf.yaml
+        default: .
+      architecture:
+        description: Target architecture for the Zarf package
+        default: amd64
+      flavor:
+        description: Flavor for the Zarf package build
+        default: upstream
+      test_directory:
+        description: Path to the test directory to pass to olm vouch. Leave empty to skip.
+        default: tests
+      enable_sigstore:
+        description: Sign attestations with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions).
+        default: "false"
+      enable_archivista:
+        description: Upload attestations to Archivista.
+        default: "false"
+    actions:
+      - description: Run full pipeline - scan, vouch, publish
+        shell:
+          linux: bash
+          darwin: bash
+        cmd: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+
+          uds run scan-and-vouch \
+            --with gitleaks_scan_path="${{ .inputs.gitleaks_scan_path }}" \
+            --with opengrep_scan_path="${{ .inputs.opengrep_scan_path }}" \
+            --with run_opengrep="${{ .inputs.run_opengrep }}" \
+            --with olm_catalog="${{ .inputs.olm_catalog }}" \
+            --with olm_org="${{ .inputs.olm_org }}" \
+            --with olm_user_id="${{ .inputs.olm_user_id }}" \
+            --with olm_password="${{ .inputs.olm_password }}" \
+            --with zarf_path="${{ .inputs.zarf_path }}" \
+            --with architecture="${{ .inputs.architecture }}" \
+            --with flavor="${{ .inputs.flavor }}" \
+            --with test_directory="${{ .inputs.test_directory }}" \
+            --with enable_sigstore="${{ .inputs.enable_sigstore }}" \
+            --with enable_archivista="${{ .inputs.enable_archivista }}"
+
+          uds run publish:zarf-package \
+            --with registry="${{ .inputs.registry }}" \
+            --with registry_org="${{ .inputs.registry_org }}" \
+            --with registry_user_id="${{ .inputs.registry_user_id }}" \
+            --with registry_password="${{ .inputs.registry_password }}"
