@@ -21,6 +21,9 @@ tasks:
       witness_key_path:
         description: Path to a local signing key for Witness. Use for local runs when enable_sigstore=false. Leave empty in CI (Sigstore is used instead).
         default: ""
+      witness_workingdir:
+        description: Directory for Witness to run the attested command from. Use the caller repository workspace in composite actions so the git attestor sees a real checkout.
+        default: ""
       enable_sigstore:
         description: Sign the attestation with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions).
         default: "false"
@@ -40,8 +43,11 @@ tasks:
           ARCHITECTURE="${{ .inputs.architecture }}"
           FLAVOR="${{ .inputs.flavor }}"
           WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
+          WITNESS_WORKINGDIR="${{ .inputs.witness_workingdir }}"
           ENABLE_SIGSTORE="${{ .inputs.enable_sigstore }}"
           ENABLE_ARCHIVISTA="${{ .inputs.enable_archivista }}"
+          OUTPUT_DIR="$(pwd)"
+          ZARF_CREATE_WITNESS="${OUTPUT_DIR}/zarf-create-witness.json"
 
           ZARF_CMD=(
             uds zarf package create "$ZARF_PATH"
@@ -49,8 +55,9 @@ tasks:
             --no-progress
             --architecture="$ARCHITECTURE"
             --flavor "$FLAVOR"
+            --output "$OUTPUT_DIR"
           )
-          rm -f zarf-create-witness.json
+          rm -f "$ZARF_CREATE_WITNESS"
 
           SHOULD_WITNESS="false"
           WITNESS_ARGS=(-a=environment -a=git)
@@ -70,11 +77,14 @@ tasks:
             fi
             WITNESS_ARGS+=(--signer-file-key-path "$WITNESS_KEY_PATH")
           fi
+          if [ -n "$WITNESS_WORKINGDIR" ]; then
+            WITNESS_ARGS+=(--workingdir "$WITNESS_WORKINGDIR")
+          fi
 
           if [ "$SHOULD_WITNESS" = "true" ]; then
             uds run setup:witness --with version="${{ .inputs.witness_version }}"
             WITNESS_ARGS+=(--enable-archivista="$ENABLE_ARCHIVISTA")
-            witness run "${WITNESS_ARGS[@]}" -s=zarf-create --outfile=zarf-create-witness.json -- "${ZARF_CMD[@]}"
+            witness run "${WITNESS_ARGS[@]}" -s=zarf-create --outfile="$ZARF_CREATE_WITNESS" -- "${ZARF_CMD[@]}"
           else
             echo "No signing key or Sigstore enabled. Building Zarf package without Witness attestation."
             "${ZARF_CMD[@]}"

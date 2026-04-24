@@ -43,6 +43,9 @@ tasks:
       witness_key_path:
         description: Path to a local signing key for Witness. Use for local runs when enable_sigstore=false. Leave empty in CI (Sigstore is used instead).
         default: ""
+      witness_workingdir:
+        description: Directory for Witness to run the attested command from. Use the caller repository workspace in composite actions so the git attestor sees a real checkout.
+        default: ""
       enable_sigstore:
         description: Sign the attestation with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions).
         default: "false"
@@ -70,6 +73,7 @@ tasks:
             --with flavor="${{ .inputs.flavor }}" \
             --with witness_version="${{ .inputs.witness_version }}" \
             --with witness_key_path="${{ .inputs.witness_key_path }}" \
+            --with witness_workingdir="${{ .inputs.witness_workingdir }}" \
             --with enable_sigstore="${{ .inputs.enable_sigstore }}" \
             --with enable_archivista="${{ .inputs.enable_archivista }}"
 

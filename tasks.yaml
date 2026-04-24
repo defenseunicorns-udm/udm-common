@@ -216,6 +216,9 @@ tasks:
       witness_key_path:
         description: Path to a local signing key for Witness. Use for local runs when enable_sigstore=false. Leave empty in CI (Sigstore is used instead).
         default: ""
+      witness_workingdir:
+        description: Directory for Witness to run attested commands from.
+        default: ""
       github_token:
         description: GitHub token for OLM CLI installation from GHCR. Pass secrets.GITHUB_TOKEN in CI. Leave empty locally.
         default: ""
@@ -257,12 +260,14 @@ tasks:
 
           EXTRA_ATTESTATIONS="${{ .inputs.extra_attestations }}"
           WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
+          WITNESS_WORKINGDIR="${{ .inputs.witness_workingdir }}"
 
           uds run scan:security \
             --with gitleaks_scan_path="${{ .inputs.gitleaks_scan_path }}" \
             --with opengrep_scan_path="${{ .inputs.opengrep_scan_path }}" \
             --with run_opengrep="${{ .inputs.run_opengrep }}" \
             --with witness_key_path="$WITNESS_KEY_PATH" \
+            --with witness_workingdir="$WITNESS_WORKINGDIR" \
             --with enable_sigstore="${{ .inputs.enable_sigstore }}" \
             --with enable_archivista="${{ .inputs.enable_archivista }}"
 
@@ -302,6 +307,7 @@ tasks:
             --with olm_catalog="${{ .inputs.olm_catalog }}" \
             --with olm_org="${{ .inputs.olm_org }}" \
             --with witness_key_path="$WITNESS_KEY_PATH" \
+            --with witness_workingdir="$WITNESS_WORKINGDIR" \
             --with attestations="${ALL_EXTRA}" \
             --with sarif_files="${SARIF_FILES}" \
             --with enable_sigstore="${{ .inputs.enable_sigstore }}" \
@@ -321,6 +327,9 @@ tasks:
         default: "true"
       witness_key_path:
         description: Path to a local signing key for Witness. Use for local runs when enable_sigstore=false. Leave empty in CI (Sigstore is used instead).
+        default: ""
+      witness_workingdir:
+        description: Directory for Witness to run attested commands from.
         default: ""
       github_token:
         description: GitHub token for OLM CLI installation from GHCR. Pass secrets.GITHUB_TOKEN in CI. Leave empty locally.
@@ -375,6 +384,7 @@ tasks:
             --with opengrep_scan_path="${{ .inputs.opengrep_scan_path }}" \
             --with run_opengrep="${{ .inputs.run_opengrep }}" \
             --with witness_key_path="${{ .inputs.witness_key_path }}" \
+            --with witness_workingdir="${{ .inputs.witness_workingdir }}" \
             --with github_token="${{ .inputs.github_token }}" \
             --with olm_catalog="${{ .inputs.olm_catalog }}" \
             --with olm_org="${{ .inputs.olm_org }}" \

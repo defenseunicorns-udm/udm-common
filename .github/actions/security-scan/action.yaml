@@ -59,6 +59,7 @@ runs:
           --with run_opengrep="${{ inputs.run-opengrep }}" \
           --with gitleaks_scan_path="$GITHUB_WORKSPACE" \
           --with opengrep_scan_path="$GITHUB_WORKSPACE/${{ inputs.opengrep-scan-path }}" \
+          --with witness_workingdir="$GITHUB_WORKSPACE" \
           --with gitleaks_version="${{ inputs.gitleaks-version }}" \
           --with opengrep_version="${{ inputs.opengrep-version }}")
 

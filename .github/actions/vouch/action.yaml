@@ -82,6 +82,7 @@ runs:
           --with attestations="${{ inputs.attestations }}" \
           --with sarif_files="${{ inputs.sarif-files }}" \
           --with test_directory="$TEST_DIR" \
+          --with witness_workingdir="$GITHUB_WORKSPACE" \
           --with zarf_path="$ZARF_PATH" \
           --with architecture="${{ inputs.zarf-architecture }}" \
           --with flavor="${{ inputs.zarf-flavor }}")
