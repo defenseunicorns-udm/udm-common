@@ -66,6 +66,8 @@ tasks:
 
       # 3. Run the command, wrapped with Witness when a signer is available
       - cmd: |
+          export PATH="${HOME}/.local/bin:${PATH}"
+
           HAS_SIGNER=false
           WITNESS_FLAGS=""
 
