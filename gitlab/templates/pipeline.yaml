@@ -60,6 +60,14 @@
 # Hidden anchors
 # ---------------------------------------------------------------------------
 
+.udm-apt-deps: &udm-apt-deps
+  - |
+    set -euo pipefail
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq
+    apt-get install -y -qq --no-install-recommends \
+      ca-certificates curl git
+
 .udm-install-uds: &udm-install-uds
   - |
     set -euo pipefail
@@ -91,6 +99,7 @@
 .udm-base:
   image: ubuntu:24.04
   before_script:
+    - *udm-apt-deps
     - *udm-install-uds
     - *udm-clone-common
 
@@ -167,6 +176,11 @@ udm:generate-app-pipeline:
       default:
         image: ubuntu:24.04
         before_script:
+          - |
+            set -euo pipefail
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update -qq
+            apt-get install -y -qq --no-install-recommends ca-certificates curl git
           - |
             set -euo pipefail
             if ! command -v uds &>/dev/null; then
