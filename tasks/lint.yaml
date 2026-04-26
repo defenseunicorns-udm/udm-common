@@ -66,35 +66,36 @@ tasks:
 
       # 3. Run the command, wrapped with Witness when a signer is available
       - cmd: |
-          set -euo pipefail
-
           HAS_SIGNER=false
-          WITNESS_ARGS=(
-            run
-            --step lint
-            --enable-archivista="${INPUT_ENABLE_ARCHIVISTA}"
-            --outfile="${INPUT_OUTFILE}"
-          )
+          WITNESS_FLAGS=""
 
           if [ "${INPUT_ENABLE_SIGSTORE}" = "true" ]; then
-            WITNESS_ARGS+=(--enable-sigstore=true --enable-timestamp=true)
+            WITNESS_FLAGS="--enable-sigstore=true --enable-timestamp=true"
             HAS_SIGNER=true
           elif [ -n "${INPUT_WITNESS_KEY_PATH}" ]; then
-            WITNESS_ARGS+=(--signer-file-key-path="${INPUT_WITNESS_KEY_PATH}")
+            WITNESS_FLAGS="--signer-file-key-path=${INPUT_WITNESS_KEY_PATH}"
             HAS_SIGNER=true
           fi
 
           if [ -n "${INPUT_WITNESS_WORKINGDIR}" ]; then
-            WITNESS_ARGS+=(--workingdir="${INPUT_WITNESS_WORKINGDIR}")
+            WITNESS_FLAGS="${WITNESS_FLAGS} --workingdir=${INPUT_WITNESS_WORKINGDIR}"
           fi
 
           if [ "${HAS_SIGNER}" = "true" ]; then
             echo "Running lint with Witness attestation..."
-            witness "${WITNESS_ARGS[@]}" -- ${INPUT_CMD}
+            witness run \
+              --step lint \
+              --enable-archivista="${INPUT_ENABLE_ARCHIVISTA}" \
+              --outfile="${INPUT_OUTFILE}" \
+              ${WITNESS_FLAGS} \
+              -- ${INPUT_CMD}
           else
             echo "No Witness signer configured — running lint without attestation."
             echo "Set enable_sigstore=true (CI) or witness_key_path= (local) to produce attestations."
             ${INPUT_CMD}
-            # Write an empty sentinel so downstream existence checks don't fail
             echo "{}" > "${INPUT_OUTFILE}"
           fi
+        shell:
+          windows: powershell
+          linux: bash
+          darwin: bash
