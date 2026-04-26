@@ -1,0 +1,264 @@
+# gitlab/templates/pipeline.yml
+#
+# Reusable UDM supply-chain pipeline for GitLab CI.
+# Mirrors the shared composite actions in .github/actions/.
+#
+# This template owns:  scan → vouch → publish
+#
+# Caller must provide a lint job that:
+#   1. Is named "lint" (or set UDM_LINT_JOB to its actual name)
+#   2. Runs `uds run lint:attest --with cmd="<your lint command>"`
+#      (lint:attest lives in udm-common/tasks/lint.yaml — include it in
+#       your tasks.yaml and it handles Witness automatically)
+#   3. Uploads lint-witness.json as an artifact
+#
+# See udm-example for a complete reference implementation.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Usage
+# ─────────────────────────────────────────────────────────────────────────────
+#
+#   include:
+#     # renovate: datasource=github-releases depName=defenseunicorns-udm/udm-common
+#     - remote: 'https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.6.0/gitlab/templates/pipeline.yml'
+#
+#   variables:
+#     UDM_COMMON_REF: "v0.6.0"
+#
+#   stages:
+#     - lint              # caller defines this stage and its job(s)
+#     - udm-scan
+#     - udm-vouch-publish
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# CI/CD Variables (Settings → CI/CD → Variables)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+#  Variable              Required  Description
+#  ────────────────────  ────────  ─────────────────────────────────────────
+#  UDM_APPS              yes       Space-separated app dir names under apps/.
+#  REGISTRY_USER_ID      yes       OCI registry username.
+#  REGISTRY_PASSWORD     yes       OCI registry password.
+#  UDM_COMMON_REF        yes       Git ref matching the tag in the include URL.
+#  UDM_LINT_JOB          no        Name of the caller's lint job.
+#                                  Default: "lint"
+#  UDM_REGISTRY          no        OCI registry host. Default: registry.uds-mil.us
+#  UDM_REGISTRY_ORG      no        Registry org. Default: $UDM_OLM_ORG
+#  UDM_OLM_CATALOG       no        OLM catalog host. Empty = skip OLM vouch.
+#  UDM_OLM_ORG           no        OLM organisation name.
+#  UDM_UDS_VERSION       no        UDS CLI version. Default: 0.27.2
+#  UDM_ZARF_ARCH         no        Zarf target arch. Default: amd64
+#  UDM_ENABLE_OPENGREP   no        Run OpenGrep SAST. Default: "true"
+#  UDM_PUBLISH_BRANCH    no        Branch that runs publish jobs.
+#                                  Default: repo default branch.
+#  GITHUB_TOKEN          no        Avoids GHCR rate limits on OLM installer.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ---------------------------------------------------------------------------
+# Hidden anchors
+# ---------------------------------------------------------------------------
+
+.udm-install-uds: &udm-install-uds
+  - |
+    set -euo pipefail
+    UDS_VERSION="${UDM_UDS_VERSION:-0.27.2}"
+    if ! command -v uds &>/dev/null; then
+      echo "Installing UDS CLI v${UDS_VERSION}..."
+      curl -fsSL \
+        "https://github.com/defenseunicorns/uds-cli/releases/download/v${UDS_VERSION}/uds-cli_v${UDS_VERSION}_linux_amd64" \
+        -o /usr/local/bin/uds
+      chmod +x /usr/local/bin/uds
+    fi
+
+.udm-clone-common: &udm-clone-common
+  - |
+    set -euo pipefail
+    if [ -z "${UDM_COMMON_REF:-}" ]; then
+      echo "ERROR: UDM_COMMON_REF is not set."
+      echo "Set it to the same tag/SHA used in the include: remote: URL."
+      exit 1
+    fi
+    if [ ! -d /opt/udm-common/.git ]; then
+      git clone --depth 1 \
+        https://github.com/defenseunicorns-udm/udm-common.git \
+        /opt/udm-common
+      git -C /opt/udm-common fetch --depth 1 origin "${UDM_COMMON_REF}"
+      git -C /opt/udm-common checkout "${UDM_COMMON_REF}"
+    fi
+
+.udm-base:
+  image: ubuntu:24.04
+  before_script:
+    - *udm-install-uds
+    - *udm-clone-common
+
+# ---------------------------------------------------------------------------
+# Scan
+# ---------------------------------------------------------------------------
+udm:scan:
+  extends: .udm-base
+  stage: udm-scan
+  needs:
+    - job: $UDM_LINT_JOB
+      artifacts: true
+  variables:
+    UDM_LINT_JOB: lint
+  script:
+    - |
+      set -euo pipefail
+      cd /opt/udm-common
+      uds run scan:security \
+        --with enable_sigstore=false \
+        --with enable_archivista=false \
+        --with run_opengrep="${UDM_ENABLE_OPENGREP:-true}" \
+        --with gitleaks_scan_path="${CI_PROJECT_DIR}" \
+        --with opengrep_scan_path="${CI_PROJECT_DIR}" \
+        --with witness_workingdir="${CI_PROJECT_DIR}"
+      for f in gitleaks-witness.json gitleaks.sarif.json \
+                opengrep-witness.json opengrep.sarif.json; do
+        mv "${f}" "${CI_PROJECT_DIR}/" 2>/dev/null || true
+      done
+  artifacts:
+    when: always
+    paths:
+      - gitleaks-witness.json
+      - gitleaks.sarif.json
+      - opengrep-witness.json
+      - opengrep.sarif.json
+    expire_in: 1 day
+
+# ---------------------------------------------------------------------------
+# Vouch + Publish — dynamic child pipeline, one job-pair per app in UDM_APPS
+# ---------------------------------------------------------------------------
+
+udm:generate-app-pipeline:
+  extends: .udm-base
+  stage: udm-vouch-publish
+  needs:
+    - job: udm:scan
+      artifacts: true
+    - job: $UDM_LINT_JOB
+      artifacts: true
+  variables:
+    UDM_LINT_JOB: lint
+  script:
+    - |
+      set -euo pipefail
+
+      if [ -z "${UDM_APPS:-}" ]; then
+        echo "ERROR: UDM_APPS is not set."
+        echo "Set it in Settings → CI/CD → Variables, e.g: UDM_APPS=api worker frontend"
+        exit 1
+      fi
+
+      UDM_REF="${UDM_COMMON_REF}"
+      UDS_VER="${UDM_UDS_VERSION:-0.27.2}"
+      ZARF_ARCH="${UDM_ZARF_ARCH:-amd64}"
+      REGISTRY="${UDM_REGISTRY:-registry.uds-mil.us}"
+      REGISTRY_ORG="${UDM_REGISTRY_ORG:-${UDM_OLM_ORG:-}}"
+      OLM_CATALOG="${UDM_OLM_CATALOG:-}"
+      OLM_ORG="${UDM_OLM_ORG:-}"
+      PUBLISH_BRANCH="${UDM_PUBLISH_BRANCH:-${CI_DEFAULT_BRANCH}}"
+
+      cat > generated-app-pipeline.yml << HEADER
+      # Auto-generated by udm-common/gitlab/templates/pipeline.yml — do not edit.
+      stages:
+        - vouch
+        - publish
+
+      default:
+        image: ubuntu:24.04
+        before_script:
+          - |
+            set -euo pipefail
+            if ! command -v uds &>/dev/null; then
+              curl -fsSL \\
+                "https://github.com/defenseunicorns/uds-cli/releases/download/v${UDS_VER}/uds-cli_v${UDS_VER}_linux_amd64" \\
+                -o /usr/local/bin/uds
+              chmod +x /usr/local/bin/uds
+            fi
+          - |
+            set -euo pipefail
+            if [ ! -d /opt/udm-common/.git ]; then
+              git clone --depth 1 \\
+                https://github.com/defenseunicorns-udm/udm-common.git \\
+                /opt/udm-common
+              git -C /opt/udm-common fetch --depth 1 origin "${UDM_REF}"
+              git -C /opt/udm-common checkout "${UDM_REF}"
+            fi
+      HEADER
+
+      for APP in ${UDM_APPS}; do
+        cat >> generated-app-pipeline.yml << APP_JOBS
+
+      "vouch:${APP}":
+        stage: vouch
+        script:
+          - |
+            set -euo pipefail
+            ATTESTATIONS=""
+            for f in lint-witness.json gitleaks-witness.json opengrep-witness.json; do
+              [ -f "\${CI_PROJECT_DIR}/\${f}" ] && \\
+                ATTESTATIONS="\${ATTESTATIONS:+\${ATTESTATIONS},}\${CI_PROJECT_DIR}/\${f}"
+            done
+            SARIF_FILES=""
+            for f in gitleaks.sarif.json opengrep.sarif.json; do
+              [ -f "\${CI_PROJECT_DIR}/\${f}" ] && \\
+                SARIF_FILES="\${SARIF_FILES:+\${SARIF_FILES},}\${CI_PROJECT_DIR}/\${f}"
+            done
+            cd /opt/udm-common
+            uds run vouch:package \\
+              --with zarf_path="\${CI_PROJECT_DIR}/apps/${APP}" \\
+              --with zarf_architecture="${ZARF_ARCH}" \\
+              --with attestations="\${ATTESTATIONS}" \\
+              --with sarif_files="\${SARIF_FILES}" \\
+              --with olm_catalog="${OLM_CATALOG}" \\
+              --with olm_org="${OLM_ORG}" \\
+              --with github_token="\${GITHUB_TOKEN:-}" \\
+              --with enable_sigstore=false \\
+              --with witness_workingdir="\${CI_PROJECT_DIR}"
+            mv zarf-package-*.tar.zst \\
+              "\${CI_PROJECT_DIR}/zarf-package-${APP}.tar.zst" 2>/dev/null || true
+            mv zarf-create-witness.json \\
+              "\${CI_PROJECT_DIR}/zarf-create-${APP}-witness.json" 2>/dev/null || true
+        artifacts:
+          when: on_success
+          paths:
+            - zarf-package-${APP}.tar.zst
+            - zarf-create-${APP}-witness.json
+          expire_in: 1 day
+
+      "publish:${APP}":
+        stage: publish
+        needs: ["vouch:${APP}"]
+        rules:
+          - if: '\$CI_COMMIT_BRANCH == "${PUBLISH_BRANCH}"'
+        script:
+          - |
+            set -euo pipefail
+            cp "\${CI_PROJECT_DIR}/zarf-package-${APP}.tar.zst" /opt/udm-common/
+            cd /opt/udm-common
+            uds run publish:zarf-package \\
+              --with registry="${REGISTRY}" \\
+              --with registry_org="${REGISTRY_ORG}" \\
+              --with registry_user_id="\${REGISTRY_USER_ID}" \\
+              --with registry_password="\${REGISTRY_PASSWORD}"
+      APP_JOBS
+      done
+
+      echo "=== generated-app-pipeline.yml ==="
+      cat generated-app-pipeline.yml
+  artifacts:
+    paths:
+      - generated-app-pipeline.yml
+    expire_in: 1 day
+
+udm:apps:
+  stage: udm-vouch-publish
+  needs: [udm:generate-app-pipeline]
+  trigger:
+    include:
+      - artifact: generated-app-pipeline.yml
+        job: udm:generate-app-pipeline
+    strategy: depend
