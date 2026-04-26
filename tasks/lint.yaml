@@ -72,8 +72,23 @@ tasks:
           WITNESS_FLAGS=""
 
           if [ "${INPUT_ENABLE_SIGSTORE}" = "true" ]; then
-            WITNESS_FLAGS="--enable-sigstore=true --enable-timestamp=true"
-            HAS_SIGNER=true
+            # Fulcio keyless signing — requires OIDC token from the CI platform.
+            # GitLab exposes ID_TOKEN (must be declared in the job) or CI_JOB_JWT_V2.
+            # The token is passed via --signer-fulcio-token.
+            OIDC_TOKEN="${SIGSTORE_ID_TOKEN:-${CI_JOB_JWT_V2:-}}"
+            if [ -z "${OIDC_TOKEN}" ]; then
+              echo "WARNING: enable_sigstore=true but no OIDC token found."
+              echo "  On GitLab, declare 'id_tokens: SIGSTORE_ID_TOKEN: aud: sigstore'" 
+              echo "  in the job, or ensure CI_JOB_JWT_V2 is available."
+              echo "  Falling back to unsigned run."
+            else
+              WITNESS_FLAGS="--signer-fulcio-url https://fulcio.sigstore.dev \
+                --signer-fulcio-oidc-client-id sigstore \
+                --signer-fulcio-oidc-issuer https://oauth2.sigstore.dev/auth \
+                --signer-fulcio-token ${OIDC_TOKEN} \
+                --timestamp-servers https://freetsa.org/tsr"
+              HAS_SIGNER=true
+            fi
           elif [ -n "${INPUT_WITNESS_KEY_PATH}" ]; then
             WITNESS_FLAGS="--signer-file-key-path=${INPUT_WITNESS_KEY_PATH}"
             HAS_SIGNER=true
@@ -83,12 +98,15 @@ tasks:
             WITNESS_FLAGS="${WITNESS_FLAGS} --workingdir=${INPUT_WITNESS_WORKINGDIR}"
           fi
 
+          if [ "${INPUT_ENABLE_ARCHIVISTA}" = "true" ]; then
+            WITNESS_FLAGS="${WITNESS_FLAGS} --enable-archivista"
+          fi
+
           if [ "${HAS_SIGNER}" = "true" ]; then
             echo "Running lint with Witness attestation..."
             witness run \
-              --step lint \
-              --enable-archivista="${INPUT_ENABLE_ARCHIVISTA}" \
-              --outfile="${INPUT_OUTFILE}" \
+              -s lint \
+              -o "${INPUT_OUTFILE}" \
               ${WITNESS_FLAGS} \
               -- ${INPUT_CMD}
           else
