@@ -47,6 +47,8 @@
 #  UDM_REGISTRY_ORG      no        Registry org. Default: $UDM_OLM_ORG
 #  UDM_OLM_CATALOG       no        OLM catalog host. Empty = skip OLM vouch.
 #  UDM_OLM_ORG           no        OLM organisation name.
+#  UDM_OLM_TOKEN_AUDIENCE no       GitLab OIDC audience for OLM/CAT token exchange.
+#                                  Default: $UDM_OLM_CATALOG.
 #  UDM_UDS_VERSION       no        UDS CLI version. Default: 0.27.2
 #  UDM_ZARF_ARCH         no        Zarf target arch. Default: amd64
 #  UDM_ENABLE_OPENGREP   no        Run OpenGrep SAST. Default: "true"
@@ -164,6 +166,7 @@ udm:generate-app-pipeline:
       REGISTRY="${UDM_REGISTRY:-registry.uds-mil.us}"
       REGISTRY_ORG="${UDM_REGISTRY_ORG:-${UDM_OLM_ORG:-}}"
       OLM_CATALOG="${UDM_OLM_CATALOG:-}"
+      OLM_TOKEN_AUDIENCE="${UDM_OLM_TOKEN_AUDIENCE:-${UDM_OLM_CATALOG:-sigstore}}"
       OLM_ORG="${UDM_OLM_ORG:-}"
       PUBLISH_BRANCH="${UDM_PUBLISH_BRANCH:-${CI_DEFAULT_BRANCH}}"
 
@@ -203,6 +206,9 @@ udm:generate-app-pipeline:
 
       "vouch:${APP}":
         stage: vouch
+        id_tokens:
+          OLM_IDENTITY_TOKEN:
+            aud: "${OLM_TOKEN_AUDIENCE}"
         script:
           - |
             set -euo pipefail
