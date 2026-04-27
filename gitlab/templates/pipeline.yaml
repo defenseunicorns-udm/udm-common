@@ -216,10 +216,15 @@ udm:generate-app-pipeline:
               [ -f "\${CI_PROJECT_DIR}/\${f}" ] && \\
                 SARIF_FILES="\${SARIF_FILES:+\${SARIF_FILES},}\${CI_PROJECT_DIR}/\${f}"
             done
+            if [ ! -f "\${CI_PROJECT_DIR}/apps/${APP}/zarf.yaml" ]; then
+              echo "ERROR: apps/${APP}/zarf.yaml does not exist."
+              echo "UDM_APPS entries must be directories under apps/ that contain a Zarf package definition."
+              exit 1
+            fi
             cd /opt/udm-common
             uds run vouch:package \\
               --with zarf_path="\${CI_PROJECT_DIR}/apps/${APP}" \\
-              --with zarf_architecture="${ZARF_ARCH}" \\
+              --with architecture="${ZARF_ARCH}" \\
               --with attestations="\${ATTESTATIONS}" \\
               --with sarif_files="\${SARIF_FILES}" \\
               --with olm_catalog="${OLM_CATALOG}" \\
