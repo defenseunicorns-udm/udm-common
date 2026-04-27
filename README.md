@@ -9,7 +9,7 @@ publishes Zarf packages to the UDS MIL registry.
 | Action | Description |
 |--------|-------------|
 | [`uds-cli-setup`](.github/actions/uds-cli-setup/action.yaml) | Installs the UDS CLI |
-| [`olm-cli-setup`](.github/actions/olm-cli-setup/action.yaml) | Authenticates with the UDS registry and installs the OLM CLI |
+| [`olm-cli-setup`](.github/actions/olm-cli-setup/action.yaml) | Authenticates with GHCR and installs the OLM CLI |
 | [`security-scan`](.github/actions/security-scan/action.yaml) | Runs Gitleaks secrets scanning and OpenGrep SAST; outputs witness JSON and SARIF file lists |
 | [`vouch`](.github/actions/vouch/action.yaml) | Builds a Zarf package with Witness attestation and vouches for it via OLM |
 | [`publish`](.github/actions/publish/action.yaml) | Publishes a vouched Zarf package to the UDS registry |
@@ -23,7 +23,7 @@ Reference actions and workflows from this repo using the full path and a ref:
 uses: defenseunicorns-udm/udm-common/.github/actions/security-scan@313297d92b3b10e1d86b18c5861a3099b46b7377 # v0.6.0
 ```
 
-### Minimal CI workflow
+### Minimal CI workflow (GitHub example)
 
 ```yaml
 jobs:
@@ -57,9 +57,6 @@ jobs:
     steps:
         uses: actions/checkout@v6.0.2
       - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@313297d92b3b10e1d86b18c5861a3099b46b7377 # v0.6.0
-      - uses: defenseunicorns-udm/udm-common/.github/actions/olm-cli-setup@313297d92b3b10e1d86b18c5861a3099b46b7377 # v0.6.0
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/download-artifact@v8.0.1
         with:
           name: lint-artifacts
@@ -72,8 +69,7 @@ jobs:
           sarif-files: "${{ steps.scan.outputs.sarif-files }}"
           olm-catalog: cat-api.uds-mil.us
           olm-org: <your-org-name>
-          olm-user-id: ${{ secrets.OLM_USER_ID }}
-          olm-password: ${{ secrets.OLM_PASSWORD }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   publish:
     needs: scan-and-vouch
@@ -114,16 +110,13 @@ jobs:
           artifact-name: zarf-package-${{ matrix.service }}
           olm-catalog: cat-api.uds-mil.us
           olm-org: <your-org-name>
-          olm-user-id: ${{ secrets.OLM_USER_ID }}
-          olm-password: ${{ secrets.OLM_PASSWORD }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ## Required Secrets
 
 | Secret | Used By | Description |
 |--------|---------|-------------|
-| `OLM_USER_ID` | `vouch` | Username for OLM catalog authentication |
-| `OLM_PASSWORD` | `vouch` | Password for OLM catalog authentication |
 | `REGISTRY_USER_ID` | `publish` | Username for publishing to `registry.uds-mil.us` |
 | `REGISTRY_PASSWORD` | `publish` | Password for publishing to `registry.uds-mil.us` |
 

@@ -1,0 +1,121 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/defenseunicorns/uds-cli/main/tasks.schema.json
+#
+# tasks/lint.yaml — udm-common
+#
+# Provides lint:attest, which wraps any lint command in a Witness attestation.
+# Customers include this file and call:
+#
+#   uds run lint:attest --with cmd="uds run lint-all"
+#
+# The `cmd` input is the only thing that varies per project. Everything else
+# — installing Witness, choosing sigstore vs file key, writing the outfile —
+# is handled here so customers never need to know Witness exists.
+#
+# Graceful degradation
+# ────────────────────
+# Witness requires a signer. Three modes are supported:
+#   1. CI (Sigstore/Fulcio)  — set enable_sigstore=true
+#   2. Local with file key   — set witness_key_path=<path to ED25519 key>
+#   3. Local no signer       — both empty; cmd runs bare and an empty
+#                              lint-witness.json sentinel is written so
+#                              downstream tasks that check for the file
+#                              don't fail.
+#
+# Includes
+# ────────
+# This file includes setup.yaml so setup:witness is available. Consumers
+# do not need to include setup.yaml separately.
+
+includes:
+  - setup: ./setup.yaml
+
+tasks:
+  # ──────────────────────────────────────────────────────────────────────────
+  # lint:attest
+  #
+  # Wraps an arbitrary lint command with Witness attestation.
+  # The produced lint-witness.json is passed to vouch as evidence.
+  # ──────────────────────────────────────────────────────────────────────────
+  - name: attest
+    description: Run a lint command and produce a Witness attestation artifact
+    inputs:
+      cmd:
+        description: The lint command to run (e.g. "uds run lint-all")
+        required: true
+      outfile:
+        description: Path to write the Witness attestation JSON
+        default: lint-witness.json
+      enable_sigstore:
+        description: Use Sigstore/Fulcio for signing (requires OIDC — set true in CI)
+        default: "false"
+      witness_key_path:
+        description: Path to an ED25519 private key for local signing (optional)
+        default: ""
+      enable_archivista:
+        description: Upload attestation to Archivista
+        default: "false"
+      witness_workingdir:
+        description: Directory Witness uses for git attestation (defaults to CWD)
+        default: ""
+    actions:
+      # 1. Ensure Witness is installed (reuses setup:witness from setup.yaml)
+      - task: setup:witness
+
+      # 2. Remove any stale outfile from a previous run
+      - cmd: rm -f "$INPUT_OUTFILE"
+
+      # 3. Run the command, wrapped with Witness when a signer is available
+      - cmd: |
+          export PATH="${HOME}/.local/bin:${PATH}"
+
+          HAS_SIGNER=false
+          WITNESS_FLAGS=""
+
+          if [ "${INPUT_ENABLE_SIGSTORE}" = "true" ]; then
+            # Fulcio keyless signing — requires OIDC token from the CI platform.
+            # GitLab exposes ID_TOKEN (must be declared in the job) or CI_JOB_JWT_V2.
+            # The token is passed via --signer-fulcio-token.
+            OIDC_TOKEN="${SIGSTORE_ID_TOKEN:-${CI_JOB_JWT_V2:-}}"
+            if [ -z "${OIDC_TOKEN}" ]; then
+              echo "WARNING: enable_sigstore=true but no OIDC token found."
+              echo "  On GitLab, declare 'id_tokens: SIGSTORE_ID_TOKEN: aud: sigstore'" 
+              echo "  in the job, or ensure CI_JOB_JWT_V2 is available."
+              echo "  Falling back to unsigned run."
+            else
+              WITNESS_FLAGS="--signer-fulcio-url https://fulcio.sigstore.dev \
+                --signer-fulcio-oidc-client-id sigstore \
+                --signer-fulcio-oidc-issuer https://oauth2.sigstore.dev/auth \
+                --signer-fulcio-token ${OIDC_TOKEN} \
+                --timestamp-servers https://freetsa.org/tsr"
+              HAS_SIGNER=true
+            fi
+          elif [ -n "${INPUT_WITNESS_KEY_PATH}" ]; then
+            WITNESS_FLAGS="--signer-file-key-path=${INPUT_WITNESS_KEY_PATH}"
+            HAS_SIGNER=true
+          fi
+
+          if [ -n "${INPUT_WITNESS_WORKINGDIR}" ]; then
+            WITNESS_FLAGS="${WITNESS_FLAGS} --workingdir=${INPUT_WITNESS_WORKINGDIR}"
+          fi
+
+          if [ "${INPUT_ENABLE_ARCHIVISTA}" = "true" ]; then
+            WITNESS_FLAGS="${WITNESS_FLAGS} --enable-archivista"
+          fi
+
+          if [ "${HAS_SIGNER}" = "true" ]; then
+            echo "Running lint with Witness attestation..."
+            witness run \
+              -s lint \
+              -o "${INPUT_OUTFILE}" \
+              ${WITNESS_FLAGS} \
+              -- ${INPUT_CMD}
+          else
+            echo "No Witness signer configured — running lint without attestation."
+            echo "Set enable_sigstore=true (CI) or witness_key_path= (local) to produce attestations."
+            ${INPUT_CMD}
+            echo "{}" > "${INPUT_OUTFILE}"
+          fi
+        shell:
+          windows: powershell
+          linux: bash
+          darwin: bash
