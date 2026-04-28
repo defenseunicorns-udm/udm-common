@@ -65,7 +65,7 @@ jobs:
         with:
           attestations: "${{ steps.scan.outputs.witness-files }},lint-witness.json"
           sarif-files: "${{ steps.scan.outputs.sarif-files }}"
-          olm-catalog: cat-api.uds-mil.us
+          olm-cat: cat-api.uds-mil.us
           olm-org: <your-org-name>
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -106,7 +106,7 @@ jobs:
           sarif-files: "${{ steps.scan.outputs.sarif-files }}"
           zarf-path: services/${{ matrix.service }}
           artifact-name: zarf-package-${{ matrix.service }}
-          olm-catalog: cat-api.uds-mil.us
+          olm-cat: cat-api.uds-mil.us
           olm-org: <your-org-name>
           github-token: ${{ secrets.GITHUB_TOKEN }}
 ```

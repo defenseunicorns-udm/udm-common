@@ -222,8 +222,8 @@ tasks:
       github_token:
         description: GitHub token for OLM CLI installation from GHCR. Pass secrets.GITHUB_TOKEN in CI. Leave empty locally.
         default: ""
-      olm_catalog:
-        description: OLM catalog hostname
+      olm_cat:
+        description: Domain of the CAT instance
         default: ""
       olm_org:
         description: OLM organization name
@@ -245,7 +245,7 @@ tasks:
         default: ""
       enable_sigstore:
         description: Sign attestations with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions).
-        default: "false"
+        default: "true"
       enable_archivista:
         description: Upload attestations to Archivista.
         default: "false"
@@ -304,7 +304,7 @@ tasks:
             --with flavor="${{ .inputs.flavor }}" \
             --with test_directory="${{ .inputs.test_directory }}" \
             --with github_token="${{ .inputs.github_token }}" \
-            --with olm_catalog="${{ .inputs.olm_catalog }}" \
+            --with olm_cat="${{ .inputs.olm_cat }}" \
             --with olm_org="${{ .inputs.olm_org }}" \
             --with witness_key_path="$WITNESS_KEY_PATH" \
             --with witness_workingdir="$WITNESS_WORKINGDIR" \
@@ -334,8 +334,8 @@ tasks:
       github_token:
         description: GitHub token for OLM CLI installation from GHCR. Pass secrets.GITHUB_TOKEN in CI. Leave empty locally.
         default: ""
-      olm_catalog:
-        description: OLM catalog hostname
+      olm_cat:
+        description: Domain of the CAT instance
         default: ""
       olm_org:
         description: OLM organization name
@@ -386,7 +386,7 @@ tasks:
             --with witness_key_path="${{ .inputs.witness_key_path }}" \
             --with witness_workingdir="${{ .inputs.witness_workingdir }}" \
             --with github_token="${{ .inputs.github_token }}" \
-            --with olm_catalog="${{ .inputs.olm_catalog }}" \
+            --with olm_cat="${{ .inputs.olm_cat }}" \
             --with olm_org="${{ .inputs.olm_org }}" \
             --with zarf_path="${{ .inputs.zarf_path }}" \
             --with architecture="${{ .inputs.architecture }}" \

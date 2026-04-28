@@ -83,7 +83,7 @@ tasks:
             exit 1
           fi
           if [ -z "$OLM_CAT" ]; then
-            echo "No OLM catalog configured. Skipping OLM vouch for local run."
+            echo "No OLM_CAT configured. Skipping OLM vouch for local run."
             exit 0
           fi
 

@@ -14,8 +14,8 @@ inputs:
     description: GitHub token for OLM CLI installation from GHCR. Recommended in CI to avoid rate limits (pass secrets.GITHUB_TOKEN). Optional for local use.
     required: false
     default: ""
-  olm-catalog:
-    description: OLM catalog hostname
+  olm-cat:
+    description: Domain of the CAT instance
     required: true
   olm-org:
     description: OLM organization name
@@ -74,8 +74,6 @@ runs:
         fi
 
         (cd "$UDM_ROOT" && uds run vouch:package \
-          --with enable_sigstore=true \
-          --with enable_archivista=false \
           --with github_token="${{ inputs.github-token }}" \
           --with olm_cat="${{ inputs.olm-cat }}" \
           --with olm_org="${{ inputs.olm-org }}" \
