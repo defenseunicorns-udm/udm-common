@@ -86,7 +86,9 @@ runs:
           --with flavor="${{ inputs.zarf-flavor }}")
 
         mv "$UDM_ROOT"/zarf-package-*.tar.zst "$GITHUB_WORKSPACE/"
-        mv "$UDM_ROOT/zarf-create-witness.json" "$GITHUB_WORKSPACE/"
+        if [[ -f "$UDM_ROOT/zarf-create-witness.json" ]]; then
+          mv "$UDM_ROOT/zarf-create-witness.json" "$GITHUB_WORKSPACE/"
+        fi
 
     - name: Find Zarf package
       id: find-package

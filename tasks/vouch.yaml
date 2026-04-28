@@ -48,7 +48,7 @@ tasks:
         default: ""
       enable_sigstore:
         description: Sign the attestation with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions).
-        default: "false"
+        default: "true"
       enable_archivista:
         description: Upload the attestation to Archivista.
         default: "false"
