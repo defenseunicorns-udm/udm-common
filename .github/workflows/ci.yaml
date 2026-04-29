@@ -27,8 +27,6 @@ jobs:
         uses: ./.github/actions/witness-run
         with:
           step: lint
-          enable-archivista: false
-          enable-sigstore: true
           command: uds run lint
           outfile: lint-witness.json
 
@@ -78,8 +76,6 @@ jobs:
       - name: Security Scan
         run: |
           uds run scan:security \
-            --with enable_sigstore=true \
-            --with enable_archivista=false \
             --with opengrep_scan_path=src/
 
       - name: Set up Docker Buildx
@@ -88,10 +84,8 @@ jobs:
       - name: Vouch
         run: |
           uds run vouch:package \
-            --with enable_sigstore=true \
-            --with enable_archivista=false \
             --with github_token="${{ secrets.GITHUB_TOKEN }}" \
-            --with olm_catalog="${{ secrets.OLM_CATALOG }}" \
+            --with olm_cat="${{ secrets.OLM_CAT }}" \
             --with olm_org="${{ secrets.OLM_ORG }}" \
             --with attestations="gitleaks-witness.json,opengrep-witness.json,lint-witness.json" \
             --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json"
@@ -123,7 +117,6 @@ jobs:
       - name: Publish
         run: |
           uds run publish:zarf-package \
-            --with registry="${{ secrets.REGISTRY_URL }}" \
             --with registry_org="${{ secrets.REGISTRY_ORG }}" \
             --with registry_user_id="${{ secrets.REGISTRY_USER_ID }}" \
             --with registry_password="${{ secrets.REGISTRY_PASSWORD }}"

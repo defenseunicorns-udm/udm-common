@@ -38,8 +38,6 @@ jobs:
       - uses: testifysec/witness-run-action@7aa15e327829f1f2a523365c564c948d5dde69dd
         with:
           step: lint
-          enable-archivista: false
-          enable-sigstore: true
           command: uds run lint        # defined in your tasks.yaml
           outfile: lint-witness.json
         uses: actions/upload-artifact@v7.0.1
@@ -67,7 +65,7 @@ jobs:
         with:
           attestations: "${{ steps.scan.outputs.witness-files }},lint-witness.json"
           sarif-files: "${{ steps.scan.outputs.sarif-files }}"
-          olm-catalog: cat-api.uds-mil.us
+          olm-cat: cat-api.uds-mil.us
           olm-org: <your-org-name>
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -81,7 +79,6 @@ jobs:
       - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@313297d92b3b10e1d86b18c5861a3099b46b7377 # v0.6.0
       - uses: defenseunicorns-udm/udm-common/.github/actions/publish@313297d92b3b10e1d86b18c5861a3099b46b7377 # v0.6.0
         with:
-          registry: registry.uds-mil.us
           registry-org: <your-org-name>
           registry-user-id: ${{ secrets.REGISTRY_USER_ID }}
           registry-password: ${{ secrets.REGISTRY_PASSWORD }}
@@ -108,7 +105,7 @@ jobs:
           sarif-files: "${{ steps.scan.outputs.sarif-files }}"
           zarf-path: services/${{ matrix.service }}
           artifact-name: zarf-package-${{ matrix.service }}
-          olm-catalog: cat-api.uds-mil.us
+          olm-cat: cat-api.uds-mil.us
           olm-org: <your-org-name>
           github-token: ${{ secrets.GITHUB_TOKEN }}
 ```

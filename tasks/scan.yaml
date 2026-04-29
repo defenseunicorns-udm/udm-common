@@ -221,12 +221,15 @@ tasks:
       opengrep_scan_path:
         default: .
       witness_version:
+        description: Witness version to install
         default: 0.9.2
       witness_key_path:
         default: ""
       witness_workingdir:
         default: ""
       enable_sigstore:
+        default: "true"
+      enable_archivista:
         default: "false"
       run_opengrep:
         default: "true"

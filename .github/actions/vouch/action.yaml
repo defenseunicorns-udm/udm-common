@@ -14,8 +14,8 @@ inputs:
     description: GitHub token for OLM CLI installation from GHCR. Recommended in CI to avoid rate limits (pass secrets.GITHUB_TOKEN). Optional for local use.
     required: false
     default: ""
-  olm-catalog:
-    description: OLM catalog hostname
+  olm-cat:
+    description: Domain of the CAT instance
     required: true
   olm-org:
     description: OLM organization name
@@ -74,10 +74,8 @@ runs:
         fi
 
         (cd "$UDM_ROOT" && uds run vouch:package \
-          --with enable_sigstore=true \
-          --with enable_archivista=false \
           --with github_token="${{ inputs.github-token }}" \
-          --with olm_catalog="${{ inputs.olm-catalog }}" \
+          --with olm_cat="${{ inputs.olm-cat }}" \
           --with olm_org="${{ inputs.olm-org }}" \
           --with attestations="${{ inputs.attestations }}" \
           --with sarif_files="${{ inputs.sarif-files }}" \
@@ -88,7 +86,9 @@ runs:
           --with flavor="${{ inputs.zarf-flavor }}")
 
         mv "$UDM_ROOT"/zarf-package-*.tar.zst "$GITHUB_WORKSPACE/"
-        mv "$UDM_ROOT/zarf-create-witness.json" "$GITHUB_WORKSPACE/"
+        if [[ -f "$UDM_ROOT/zarf-create-witness.json" ]]; then
+          mv "$UDM_ROOT/zarf-create-witness.json" "$GITHUB_WORKSPACE/"
+        fi
 
     - name: Find Zarf package
       id: find-package

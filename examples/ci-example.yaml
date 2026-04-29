@@ -29,8 +29,6 @@ jobs:
         uses: defenseunicorns-udm/udm-common/.github/actions/witness-run@9cb4474bf099d2a5f054bc2c88c97c1c715f9960 # v0.5.1
         with:
           step: lint
-          enable-archivista: false
-          enable-sigstore: true
           command: uds run lint
           outfile: lint-witness.json
 
@@ -70,7 +68,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           attestations: ${{ steps.scan.outputs.witness-files }},lint-witness.json
           sarif-files: ${{ steps.scan.outputs.sarif-files }}
-          olm-catalog: cat-api.uds-mil.us
+          olm-cat: cat-api.uds-mil.us
           olm-org: <your-org-name>
 
   publish:
@@ -88,7 +86,6 @@ jobs:
       - name: Publish
         uses: defenseunicorns-udm/udm-common/.github/actions/publish@9cb4474bf099d2a5f054bc2c88c97c1c715f9960 # v0.5.1
         with:
-          registry: registry.uds-mil.us
           registry-org: <your-org-name>
           registry-user-id: ${{ secrets.REGISTRY_USER_ID }}
           registry-password: ${{ secrets.REGISTRY_PASSWORD }}

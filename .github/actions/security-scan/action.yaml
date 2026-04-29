@@ -54,8 +54,6 @@ runs:
         cp "${{ github.action_path }}/.gitleaks.toml" "$UDM_ROOT/.gitleaks.toml"
 
         (cd "$UDM_ROOT" && uds run scan:security \
-          --with enable_sigstore=true \
-          --with enable_archivista=false \
           --with run_opengrep="${{ inputs.run-opengrep }}" \
           --with gitleaks_scan_path="$GITHUB_WORKSPACE" \
           --with opengrep_scan_path="$GITHUB_WORKSPACE/${{ inputs.opengrep-scan-path }}" \
