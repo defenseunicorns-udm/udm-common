@@ -389,8 +389,15 @@ tasks:
             rm -f "$EPHEMERAL_KEY"
           fi
 
+          REGISTRY="${{ .inputs.registry }}"
+          PUBLISH_DRY_RUN="false"
+          if [ -z "$REGISTRY" ]; then
+            PUBLISH_DRY_RUN="true"
+          fi
+
           uds run publish:zarf-package \
-            --with registry="${{ .inputs.registry }}" \
+            --with registry="$REGISTRY" \
             --with registry_org="${{ .inputs.registry_org }}" \
             --with registry_user_id="${{ .inputs.registry_user_id }}" \
-            --with registry_password="${{ .inputs.registry_password }}"
+            --with registry_password="${{ .inputs.registry_password }}" \
+            --with dry_run="$PUBLISH_DRY_RUN"
