@@ -32,14 +32,6 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Ensure Gitleaks config is present
-      shell: bash
-      run: |
-        if [ ! -f .gitleaks.toml ]; then
-          cp "${{ github.action_path }}/.gitleaks.toml" .gitleaks.toml
-          echo "COPIED_GITLEAKS=true" >> $GITHUB_ENV
-        fi
-
     - name: Security Scan
       shell: bash
       run: |

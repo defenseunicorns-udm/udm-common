@@ -14,10 +14,6 @@ tasks:
       flavor:
         description: Flavor for the Zarf package build
         default: upstream
-      witness_version:
-        description: Witness version (MAJOR.MINOR.PATCH, no v prefix)
-        # renovate: datasource=github-releases depName=in-toto/witness extractVersion=^v(?<version>.+)$
-        default: 0.9.2
       witness_key_path:
         description: Path to a local signing key for Witness. Use for local runs when enable_sigstore=false. Leave empty in CI (Sigstore is used instead).
         default: ""
@@ -82,7 +78,7 @@ tasks:
           fi
 
           if [ "$SHOULD_WITNESS" = "true" ]; then
-            uds run setup:witness --with version="${{ .inputs.witness_version }}"
+            uds run setup:witness
             WITNESS_ARGS+=(--enable-archivista="$ENABLE_ARCHIVISTA")
             witness run "${WITNESS_ARGS[@]}" -s=zarf-create --outfile="$ZARF_CREATE_WITNESS" -- "${ZARF_CMD[@]}"
           else
