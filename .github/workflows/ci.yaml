@@ -92,6 +92,7 @@ jobs:
       - name: Publish
         run: |
           uds run publish:zarf-package \
+            --with registry="registry.uds-mil.us" \
             --with registry_org="${{ secrets.REGISTRY_ORG }}" \
             --with registry_user_id="${{ secrets.REGISTRY_USER_ID }}" \
             --with registry_password="${{ secrets.REGISTRY_PASSWORD }}"
