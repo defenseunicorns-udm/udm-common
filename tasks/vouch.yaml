@@ -33,17 +33,11 @@ tasks:
         description: Path to the test directory to pass to olm vouch. Leave empty to skip.
         default: tests
       witness_key_path:
-        description: Path to a local signing key for Witness. Use for local runs when enable_sigstore=false. Leave empty in CI (Sigstore is used instead).
+        description: Path to a local signing key for Witness. Use for local runs without OIDC. Leave empty in CI (Sigstore is used instead).
         default: ""
       witness_workingdir:
         description: Directory for Witness to run the attested command from. Use the caller repository workspace in composite actions so the git attestor sees a real checkout.
         default: ""
-      enable_sigstore:
-        description: Sign the attestation with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions).
-        default: "true"
-      enable_archivista:
-        description: Upload the attestation to Archivista.
-        default: "false"
     actions:
       - description: Install tools, build Zarf package, and vouch
         shell:
@@ -64,9 +58,7 @@ tasks:
             --with architecture="${{ .inputs.architecture }}" \
             --with flavor="${{ .inputs.flavor }}" \
             --with witness_key_path="${{ .inputs.witness_key_path }}" \
-            --with witness_workingdir="${{ .inputs.witness_workingdir }}" \
-            --with enable_sigstore="${{ .inputs.enable_sigstore }}" \
-            --with enable_archivista="${{ .inputs.enable_archivista }}"
+            --with witness_workingdir="${{ .inputs.witness_workingdir }}"
 
           PACKAGE=$(find . -maxdepth 1 -name "zarf-package-*.tar.zst" -type f | head -n 1)
           if [ -z "$PACKAGE" ]; then

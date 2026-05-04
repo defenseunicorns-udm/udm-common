@@ -214,7 +214,7 @@ tasks:
         description: Whether to run OpenGrep SAST. Set to 'false' to skip.
         default: "true"
       witness_key_path:
-        description: Path to a local signing key for Witness. Use for local runs when enable_sigstore=false. Leave empty in CI (Sigstore is used instead).
+        description: Path to a local signing key for Witness. Use for local runs without OIDC. Leave empty in CI (Sigstore is used instead).
         default: ""
       witness_workingdir:
         description: Directory for Witness to run attested commands from.
@@ -243,12 +243,6 @@ tasks:
       extra_attestations:
         description: Comma-separated list of additional witness JSON attestation files to include in vouch
         default: ""
-      enable_sigstore:
-        description: Sign attestations with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions).
-        default: "true"
-      enable_archivista:
-        description: Upload attestations to Archivista.
-        default: "false"
     actions:
       - description: Run security scans then vouch for Zarf package
         shell:
@@ -267,9 +261,7 @@ tasks:
             --with opengrep_scan_path="${{ .inputs.opengrep_scan_path }}" \
             --with run_opengrep="${{ .inputs.run_opengrep }}" \
             --with witness_key_path="$WITNESS_KEY_PATH" \
-            --with witness_workingdir="$WITNESS_WORKINGDIR" \
-            --with enable_sigstore="${{ .inputs.enable_sigstore }}" \
-            --with enable_archivista="${{ .inputs.enable_archivista }}"
+            --with witness_workingdir="$WITNESS_WORKINGDIR"
 
           SARIF_FILE_LIST=()
           SCAN_ATTESTATION_LIST=()
@@ -309,9 +301,7 @@ tasks:
             --with witness_key_path="$WITNESS_KEY_PATH" \
             --with witness_workingdir="$WITNESS_WORKINGDIR" \
             --with attestations="${ALL_EXTRA}" \
-            --with sarif_files="${SARIF_FILES}" \
-            --with enable_sigstore="${{ .inputs.enable_sigstore }}" \
-            --with enable_archivista="${{ .inputs.enable_archivista }}"
+            --with sarif_files="${SARIF_FILES}"
 
   - name: pipeline
     description: Full local pipeline - scan, vouch, and publish
@@ -326,7 +316,7 @@ tasks:
         description: Whether to run OpenGrep SAST. Set to 'false' to skip.
         default: "true"
       witness_key_path:
-        description: Path to a local signing key for Witness. Use for local runs when enable_sigstore=false. Leave empty in CI (Sigstore is used instead).
+        description: Path to a local signing key for Witness. Leave empty to auto-generate an ephemeral key for local runs.
         default: ""
       witness_workingdir:
         description: Directory for Witness to run attested commands from.
@@ -364,12 +354,6 @@ tasks:
       test_directory:
         description: Path to the test directory to pass to olm vouch. Leave empty to skip.
         default: tests
-      enable_sigstore:
-        description: Sign attestations with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions).
-        default: "false"
-      enable_archivista:
-        description: Upload attestations to Archivista.
-        default: "false"
     actions:
       - description: Run full pipeline - scan, vouch, publish
         shell:
@@ -379,11 +363,19 @@ tasks:
           set -euo pipefail
           export PATH="$HOME/.local/bin:$PATH"
 
+          WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
+          EPHEMERAL_KEY=""
+          if [ -z "$WITNESS_KEY_PATH" ]; then
+            EPHEMERAL_KEY=$(mktemp --suffix=.pem)
+            openssl genpkey -algorithm ED25519 -out "$EPHEMERAL_KEY" 2>/dev/null
+            WITNESS_KEY_PATH="$EPHEMERAL_KEY"
+          fi
+
           uds run scan-and-vouch \
             --with gitleaks_scan_path="${{ .inputs.gitleaks_scan_path }}" \
             --with opengrep_scan_path="${{ .inputs.opengrep_scan_path }}" \
             --with run_opengrep="${{ .inputs.run_opengrep }}" \
-            --with witness_key_path="${{ .inputs.witness_key_path }}" \
+            --with witness_key_path="$WITNESS_KEY_PATH" \
             --with witness_workingdir="${{ .inputs.witness_workingdir }}" \
             --with github_token="${{ .inputs.github_token }}" \
             --with olm_cat="${{ .inputs.olm_cat }}" \
@@ -391,9 +383,11 @@ tasks:
             --with zarf_path="${{ .inputs.zarf_path }}" \
             --with architecture="${{ .inputs.architecture }}" \
             --with flavor="${{ .inputs.flavor }}" \
-            --with test_directory="${{ .inputs.test_directory }}" \
-            --with enable_sigstore="${{ .inputs.enable_sigstore }}" \
-            --with enable_archivista="${{ .inputs.enable_archivista }}"
+            --with test_directory="${{ .inputs.test_directory }}"
+
+          if [ -n "$EPHEMERAL_KEY" ]; then
+            rm -f "$EPHEMERAL_KEY"
+          fi
 
           uds run publish:zarf-package \
             --with registry="${{ .inputs.registry }}" \

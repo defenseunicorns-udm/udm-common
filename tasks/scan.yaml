@@ -95,7 +95,14 @@ tasks:
           WITNESS_ARGS=(-a=environment -a=git)
           SHOULD_WITNESS="false"
 
-          if [ "$ENABLE_SIGSTORE" = "true" ]; then
+          if [ -n "$WITNESS_KEY_PATH" ]; then
+            SHOULD_WITNESS="true"
+            if [ ! -f "$WITNESS_KEY_PATH" ]; then
+              echo "Witness key file does not exist: $WITNESS_KEY_PATH"
+              exit 1
+            fi
+            WITNESS_ARGS+=(--signer-file-key-path "$WITNESS_KEY_PATH")
+          elif [ "$ENABLE_SIGSTORE" = "true" ]; then
             SHOULD_WITNESS="true"
             WITNESS_ARGS+=(
               --signer-fulcio-url=https://fulcio.sigstore.dev
@@ -103,13 +110,6 @@ tasks:
               --signer-fulcio-oidc-issuer=https://oauth2.sigstore.dev/auth
               --timestamp-servers=https://timestamp.sigstore.dev/api/v1/timestamp
             )
-          elif [ -n "$WITNESS_KEY_PATH" ]; then
-            SHOULD_WITNESS="true"
-            if [ ! -f "$WITNESS_KEY_PATH" ]; then
-              echo "Witness key file does not exist: $WITNESS_KEY_PATH"
-              exit 1
-            fi
-            WITNESS_ARGS+=(--signer-file-key-path "$WITNESS_KEY_PATH")
           fi
           if [ -n "$WITNESS_WORKINGDIR" ]; then
             WITNESS_ARGS+=(--workingdir "$WITNESS_WORKINGDIR")
@@ -174,7 +174,14 @@ tasks:
           WITNESS_ARGS=(-a=environment -a=git)
           SHOULD_WITNESS="false"
 
-          if [ "$ENABLE_SIGSTORE" = "true" ]; then
+          if [ -n "$WITNESS_KEY_PATH" ]; then
+            SHOULD_WITNESS="true"
+            if [ ! -f "$WITNESS_KEY_PATH" ]; then
+              echo "Witness key file does not exist: $WITNESS_KEY_PATH"
+              exit 1
+            fi
+            WITNESS_ARGS+=(--signer-file-key-path "$WITNESS_KEY_PATH")
+          elif [ "$ENABLE_SIGSTORE" = "true" ]; then
             SHOULD_WITNESS="true"
             WITNESS_ARGS+=(
               --signer-fulcio-url=https://fulcio.sigstore.dev
@@ -182,13 +189,6 @@ tasks:
               --signer-fulcio-oidc-issuer=https://oauth2.sigstore.dev/auth
               --timestamp-servers=https://timestamp.sigstore.dev/api/v1/timestamp
             )
-          elif [ -n "$WITNESS_KEY_PATH" ]; then
-            SHOULD_WITNESS="true"
-            if [ ! -f "$WITNESS_KEY_PATH" ]; then
-              echo "Witness key file does not exist: $WITNESS_KEY_PATH"
-              exit 1
-            fi
-            WITNESS_ARGS+=(--signer-file-key-path "$WITNESS_KEY_PATH")
           fi
           if [ -n "$WITNESS_WORKINGDIR" ]; then
             WITNESS_ARGS+=(--workingdir "$WITNESS_WORKINGDIR")
