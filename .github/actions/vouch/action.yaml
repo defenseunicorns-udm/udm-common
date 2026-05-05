@@ -24,10 +24,6 @@ inputs:
     description: Target architecture for the Zarf package
     required: false
     default: amd64
-  zarf-flavor:
-    description: Flavor for the Zarf package build
-    required: false
-    default: upstream
   zarf-path:
     description: Path to the directory containing zarf.yaml. Use a subdirectory path for monorepos (e.g. 'services/api').
     required: false
@@ -76,7 +72,6 @@ runs:
           --with witness_workingdir="$GITHUB_WORKSPACE" \
           --with zarf_path="$ZARF_PATH" \
           --with architecture="${{ inputs.zarf-architecture }}" \
-          --with flavor="${{ inputs.zarf-flavor }}")
 
         mv "$UDM_ROOT"/zarf-package-*.tar.zst "$GITHUB_WORKSPACE/"
         if [[ -f "$UDM_ROOT/zarf-create-witness.json" ]]; then

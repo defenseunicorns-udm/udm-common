@@ -26,9 +26,6 @@ tasks:
       architecture:
         description: Target architecture for the Zarf package
         default: amd64
-      flavor:
-        description: Flavor for the Zarf package build
-        default: upstream
       test_directory:
         description: Path to the test directory to pass to olm vouch. Leave empty to skip.
         default: tests
@@ -56,7 +53,6 @@ tasks:
           uds run build:zarf-package \
             --with zarf_path="${{ .inputs.zarf_path }}" \
             --with architecture="${{ .inputs.architecture }}" \
-            --with flavor="${{ .inputs.flavor }}" \
             --with witness_key_path="${{ .inputs.witness_key_path }}" \
             --with witness_workingdir="${{ .inputs.witness_workingdir }}"
 

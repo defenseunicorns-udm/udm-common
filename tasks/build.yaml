@@ -11,9 +11,6 @@ tasks:
       architecture:
         description: Target architecture for the Zarf package
         default: amd64
-      flavor:
-        description: Flavor for the Zarf package build
-        default: upstream
       witness_key_path:
         description: Path to a local signing key for Witness. Use for local runs when enable_sigstore=false. Leave empty in CI (Sigstore is used instead).
         default: ""
@@ -37,7 +34,6 @@ tasks:
 
           ZARF_PATH="${{ .inputs.zarf_path }}"
           ARCHITECTURE="${{ .inputs.architecture }}"
-          FLAVOR="${{ .inputs.flavor }}"
           WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
           WITNESS_WORKINGDIR="${{ .inputs.witness_workingdir }}"
           ENABLE_SIGSTORE="${{ .inputs.enable_sigstore }}"
@@ -50,7 +46,6 @@ tasks:
             --confirm
             --no-progress
             --architecture="$ARCHITECTURE"
-            --flavor "$FLAVOR"
             --output "$OUTPUT_DIR"
           )
           rm -f "$ZARF_CREATE_WITNESS"
@@ -67,7 +62,7 @@ tasks:
           elif [ "$ENABLE_SIGSTORE" = "true" ]; then
             SHOULD_WITNESS="true"
             WITNESS_ARGS+=(
-              --signer-fulcio-url=https://fulcio.sigstore.dev
+              --signer-fulcio-url=https://fulcio.uds-mil.us
               --signer-fulcio-oidc-client-id=sigstore
               --signer-fulcio-oidc-issuer=https://oauth2.sigstore.dev/auth
               --timestamp-servers=https://timestamp.sigstore.dev/api/v1/timestamp
