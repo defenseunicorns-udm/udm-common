@@ -106,6 +106,32 @@ jobs:
           registry-password: ${{ secrets.REGISTRY_PASSWORD }}
 ```
 
+## Custom Build Commands
+
+By default, the `vouch` action and `build:zarf-package` task run `uds zarf package create`.
+If your build requires a custom script (pre-processing, non-standard flags, multi-step build), pass `build-command` to the `vouch` action or `build_command` to the task directly.
+
+**GitHub Actions:**
+```yaml
+- uses: defenseunicorns-udm/udm-common/.github/actions/vouch@313297d92b3b10e1d86b18c5861a3099b46b7377 # v0.6.0
+  with:
+    build-command: ./scripts/my-build.sh
+    attestations: "${{ steps.scan.outputs.witness-files }},lint-witness.json"
+    sarif-files: "${{ steps.scan.outputs.sarif-files }}"
+    olm-cat: cat-api.uds-mil.us
+    olm-org: <your-org-name>
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+**UDS task:**
+```yaml
+- task: build:zarf-package
+  with:
+    build_command: ./scripts/my-build.sh
+```
+
+The custom command runs under Witness attestation — the resulting `zarf-create-witness.json` is identical in structure to a standard build. Scripts with complex quoting should be placed in a file and called by path rather than passed inline.
+
 ## Required Secrets
 
 | Secret | Used By | Description |

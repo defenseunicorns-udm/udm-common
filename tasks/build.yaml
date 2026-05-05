@@ -23,6 +23,12 @@ tasks:
       enable_archivista:
         description: Upload the attestation to Archivista.
         default: "false"
+      build_command:
+        description: |
+          Optional. Custom build command to run under Witness attestation instead of
+          the default 'uds zarf package create'. When set, zarf_path and architecture
+          inputs are ignored.
+        default: ""
     actions:
       - description: Install Witness and build Zarf package with attestation
         shell:
@@ -38,16 +44,21 @@ tasks:
           WITNESS_WORKINGDIR="${{ .inputs.witness_workingdir }}"
           ENABLE_SIGSTORE="${{ .inputs.enable_sigstore }}"
           ENABLE_ARCHIVISTA="${{ .inputs.enable_archivista }}"
+          CUSTOM_CMD="${{ .inputs.build_command }}"
           OUTPUT_DIR="$(pwd)"
           ZARF_CREATE_WITNESS="${OUTPUT_DIR}/zarf-create-witness.json"
 
-          ZARF_CMD=(
-            uds zarf package create "$ZARF_PATH"
-            --confirm
-            --no-progress
-            --architecture="$ARCHITECTURE"
-            --output "$OUTPUT_DIR"
-          )
+          if [ -n "$CUSTOM_CMD" ]; then
+            ZARF_CMD=(bash -c "$CUSTOM_CMD")
+          else
+            ZARF_CMD=(
+              uds zarf package create "$ZARF_PATH"
+              --confirm
+              --no-progress
+              --architecture="$ARCHITECTURE"
+              --output "$OUTPUT_DIR"
+            )
+          fi
           rm -f "$ZARF_CREATE_WITNESS"
 
           SHOULD_WITNESS="false"

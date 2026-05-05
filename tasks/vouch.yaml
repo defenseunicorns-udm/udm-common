@@ -35,6 +35,9 @@ tasks:
       witness_workingdir:
         description: Directory for Witness to run the attested command from. Use the caller repository workspace in composite actions so the git attestor sees a real checkout.
         default: ""
+      build_command:
+        description: Optional. Custom build command to run under Witness attestation instead of the default 'uds zarf package create'. When set, zarf_path and architecture inputs are ignored.
+        default: ""
     actions:
       - description: Install tools, build Zarf package, and vouch
         shell:
@@ -54,7 +57,8 @@ tasks:
             --with zarf_path="${{ .inputs.zarf_path }}" \
             --with architecture="${{ .inputs.architecture }}" \
             --with witness_key_path="${{ .inputs.witness_key_path }}" \
-            --with witness_workingdir="${{ .inputs.witness_workingdir }}"
+            --with witness_workingdir="${{ .inputs.witness_workingdir }}" \
+            --with build_command="${{ .inputs.build_command }}"
 
           PACKAGE=$(find . -maxdepth 1 -name "zarf-package-*.tar.zst" -type f | head -n 1)
           if [ -z "$PACKAGE" ]; then

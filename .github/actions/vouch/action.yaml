@@ -32,6 +32,10 @@ inputs:
     description: Path to the test directory to pass to olm vouch. Leave empty to skip the --test-directory flag entirely.
     required: false
     default: tests
+  build-command:
+    description: Optional. Custom build command to run under Witness attestation instead of the default 'uds zarf package create'. When set, zarf-path and zarf-architecture inputs are ignored.
+    required: false
+    default: ""
 
 outputs:
   zarf-package:
@@ -72,6 +76,7 @@ runs:
           --with witness_workingdir="$GITHUB_WORKSPACE" \
           --with zarf_path="$ZARF_PATH" \
           --with architecture="${{ inputs.zarf-architecture }}" \
+          --with build_command="${{ inputs.build-command }}" \
 
         mv "$UDM_ROOT"/zarf-package-*.tar.zst "$GITHUB_WORKSPACE/"
         if [[ -f "$UDM_ROOT/zarf-create-witness.json" ]]; then

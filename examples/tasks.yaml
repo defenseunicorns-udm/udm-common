@@ -46,3 +46,26 @@ tasks:
   #     - cmd: ruff check services/api
   #     - cmd: golangci-lint run ./services/worker/...
   #     - cmd: npx eslint services/frontend
+
+  # ---------------------------------------------------------------------------
+  # Custom Zarf build command
+  # Use build_command when your build requires pre-processing, non-standard flags,
+  # or a multi-step script instead of plain 'uds zarf package create'.
+  # The command still runs under Witness attestation; output is zarf-create-witness.json.
+  # ---------------------------------------------------------------------------
+  # - name: build
+  #   description: Build Zarf package with a custom build script
+  #   actions:
+  #     - task: build:zarf-package
+  #       with:
+  #         build_command: ./scripts/my-build.sh
+
+  # Equivalent via vouch (builds + vouches in one step):
+  # - name: vouch
+  #   description: Build and vouch with a custom build script
+  #   actions:
+  #     - task: vouch:package
+  #       with:
+  #         build_command: ./scripts/my-build.sh
+  #         olm_cat: cat-api.uds-mil.us
+  #         olm_org: <your-org-name>
