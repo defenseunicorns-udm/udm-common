@@ -107,7 +107,7 @@ tasks:
             WITNESS_ARGS+=(
               --signer-fulcio-url=https://fulcio.uds-mil.us
               --signer-fulcio-oidc-client-id=sigstore
-              --signer-fulcio-oidc-issuer=https://oauth2.sigstore.dev/auth
+              --signer-fulcio-oidc-issuer=https://token.actions.githubusercontent.com
               --timestamp-servers=https://timestamp.sigstore.dev/api/v1/timestamp
             )
           fi
@@ -186,7 +186,7 @@ tasks:
             WITNESS_ARGS+=(
               --signer-fulcio-url=https://fulcio.sigstore.dev
               --signer-fulcio-oidc-client-id=sigstore
-              --signer-fulcio-oidc-issuer=https://oauth2.sigstore.dev/auth
+              --signer-fulcio-oidc-issuer=https://token.actions.githubusercontent.com
               --timestamp-servers=https://timestamp.sigstore.dev/api/v1/timestamp
             )
           fi
