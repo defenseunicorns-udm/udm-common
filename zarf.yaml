@@ -19,8 +19,6 @@ components:
     description: Deploy nginx with upstream images
     import:
       path: common
-    only:
-      flavor: upstream
     charts:
       - name: nginx
         valuesFiles:
