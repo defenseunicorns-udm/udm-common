@@ -76,7 +76,7 @@ runs:
           --with witness_workingdir="$GITHUB_WORKSPACE" \
           --with zarf_path="$ZARF_PATH" \
           --with architecture="${{ inputs.zarf-architecture }}" \
-          --with build_command="${{ inputs.build-command }}" \
+          --with build_command="${{ inputs.build-command }}")
 
         mv "$UDM_ROOT"/zarf-package-*.tar.zst "$GITHUB_WORKSPACE/"
         if [[ -f "$UDM_ROOT/zarf-create-witness.json" ]]; then
