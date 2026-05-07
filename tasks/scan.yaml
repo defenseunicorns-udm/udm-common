@@ -105,7 +105,7 @@ tasks:
           elif [ "$ENABLE_SIGSTORE" = "true" ]; then
             SHOULD_WITNESS="true"
             WITNESS_ARGS+=(
-              --signer-fulcio-url=https://fulcio.uds-mil.us
+              --signer-fulcio-url=https://fulcio.sigstore.dev
               --signer-fulcio-oidc-client-id=sigstore
               --signer-fulcio-oidc-issuer=https://token.actions.githubusercontent.com
               --timestamp-servers=https://timestamp.sigstore.dev/api/v1/timestamp
