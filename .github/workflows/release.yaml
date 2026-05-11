@@ -46,7 +46,7 @@ jobs:
           SEEN=""
           EXTRA=$(mktemp)
 
-          while read -r SHA; do
+          git log "${PREV_TAG}..${TAG}" --format="%H" | while read -r SHA; do
             PR_JSON=$(gh api "/repos/${REPO}/commits/${SHA}/pulls" \
               -H "Accept: application/vnd.github+json" 2>/dev/null \
               | jq -c '.[0] // empty')
@@ -62,7 +62,7 @@ jobs:
             [ -z "$SUMMARY" ] && continue
 
             printf '\n### PR #%s\n\n%s\n' "$NUM" "$SUMMARY" >> "$EXTRA"
-          done < <(git log "${PREV_TAG}..${TAG}" --format="%H")
+          done
 
           if [ -s "$EXTRA" ]; then
             BODY=$(mktemp)
