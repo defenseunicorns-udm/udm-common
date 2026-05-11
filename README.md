@@ -132,6 +132,69 @@ If your build requires a custom script (pre-processing, non-standard flags, mult
 
 The custom command runs under Witness attestation — the resulting `zarf-create-witness.json` is identical in structure to a standard build. Scripts with complex quoting should be placed in a file and called by path rather than passed inline.
 
+## Run Locally
+
+Use the UDS CLI to execute tasks locally before you push or run CI.
+
+- Run lint and generate a Witness attestation:
+
+```bash
+uds run lint
+```
+
+- Build a Zarf package locally with the shared `build:zarf-package` task:
+
+```bash
+uds run build:zarf-package --with zarf_path=. --with architecture=amd64
+```
+
+- Build a flavored Zarf package locally:
+
+```bash
+uds run build:zarf-package \
+  --with zarf_path=. \
+  --with architecture=amd64 \
+  --with zarf_flavor=upstream
+```
+
+- Build a Zarf package locally with a custom build command:
+
+```bash
+uds run build:zarf-package --with build_command="./scripts/my-build.sh"
+```
+
+- Build and vouch locally using the shared `vouch:package` task:
+
+```bash
+uds run vouch:package \
+  --with zarf_path=. \
+  --with olm_cat=cat-api.uds-mil.us \
+  --with olm_org=<your-org-name> \
+  --with github_token="$GITHUB_TOKEN"
+```
+
+- Build and vouch locally with a custom build command:
+
+```bash
+uds run vouch:package \
+  --with build_command="./scripts/my-build.sh" \
+  --with olm_cat=cat-api.uds-mil.us \
+  --with olm_org=<your-org-name> \
+  --with github_token="$GITHUB_TOKEN"
+```
+
+- Test publish behavior locally without pushing to a registry:
+
+```bash
+uds run publish:zarf-package --with dry_run=true
+```
+
+Notes:
+
+- `build_command` replaces the default `uds zarf package create` flow. If you use `--with build_command=...`, `--with zarf_path` and `--with architecture` are ignored by `build:zarf-package`.
+- `zarf_flavor` applies to normal `uds zarf package create` builds. It has no effect when the build is driven by a custom `build_command`.
+- For local runs without Sigstore/OIDC, pass `--with enable_sigstore=false` and `--with witness_key_path=/path/to/key` to `build:zarf-package` or `vouch:package`.
+
 ## Required Secrets
 
 | Secret | Used By | Description |
