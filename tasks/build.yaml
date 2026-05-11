@@ -23,6 +23,10 @@ tasks:
       enable_archivista:
         description: Upload the attestation to Archivista.
         default: "false"
+      zarf_flavor:
+        description: Optional flavor to pass to zarf package create. If not set, no flavor will be used.
+        required: false
+        default: ""
       build_command:
         description: |
           Optional. Custom build command to run under Witness attestation instead of
@@ -40,6 +44,7 @@ tasks:
 
           ZARF_PATH="${{ .inputs.zarf_path }}"
           ARCHITECTURE="${{ .inputs.architecture }}"
+          FLAVOR="${{ .inputs.zarf_flavor }}"
           WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
           WITNESS_WORKINGDIR="${{ .inputs.witness_workingdir }}"
           ENABLE_SIGSTORE="${{ .inputs.enable_sigstore }}"
@@ -58,6 +63,9 @@ tasks:
               --architecture="$ARCHITECTURE"
               --output "$OUTPUT_DIR"
             )
+            if [ -n "$FLAVOR" ]; then
+              ZARF_CMD+=(--flavor="$FLAVOR")
+            fi
           fi
           rm -f "$ZARF_CREATE_WITNESS"
 

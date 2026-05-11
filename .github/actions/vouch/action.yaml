@@ -24,6 +24,10 @@ inputs:
     description: Target architecture for the Zarf package
     required: false
     default: amd64
+  zarf-flavor:
+    description: Optional flavor to pass to zarf package create. If not set, no flavor will be used.
+    required: false
+    default: ""
   zarf-path:
     description: Path to the directory containing zarf.yaml. Use a subdirectory path for monorepos (e.g. 'services/api').
     required: false
@@ -66,17 +70,23 @@ runs:
           TEST_DIR="${GITHUB_WORKSPACE}/${{ inputs.test-directory }}"
         fi
 
-        (cd "$UDM_ROOT" && uds run vouch:package \
-          --with github_token="${{ inputs.github-token }}" \
-          --with olm_cat="${{ inputs.olm-cat }}" \
-          --with olm_org="${{ inputs.olm-org }}" \
-          --with attestations="${{ inputs.attestations }}" \
-          --with sarif_files="${{ inputs.sarif-files }}" \
-          --with test_directory="$TEST_DIR" \
-          --with witness_workingdir="$GITHUB_WORKSPACE" \
-          --with zarf_path="$ZARF_PATH" \
-          --with architecture="${{ inputs.zarf-architecture }}" \
-          --with build_command="${{ inputs.build-command }}")
+        VOUCH_ARGS=(
+          --with github_token="${{ inputs.github-token }}"
+          --with olm_cat="${{ inputs.olm-cat }}"
+          --with olm_org="${{ inputs.olm-org }}"
+          --with attestations="${{ inputs.attestations }}"
+          --with sarif_files="${{ inputs.sarif-files }}"
+          --with test_directory="$TEST_DIR"
+          --with witness_workingdir="$GITHUB_WORKSPACE"
+          --with zarf_path="$ZARF_PATH"
+          --with architecture="${{ inputs.zarf-architecture }}"
+          --with build_command="${{ inputs.build-command }}"
+        )
+        if [[ -n "${{ inputs.zarf-flavor }}" ]]; then
+          VOUCH_ARGS+=(--with zarf_flavor="${{ inputs.zarf-flavor }}")
+        fi
+
+        (cd "$UDM_ROOT" && uds run vouch:package "${VOUCH_ARGS[@]}")
 
         mv "$UDM_ROOT"/zarf-package-*.tar.zst "$GITHUB_WORKSPACE/"
         if [[ -f "$UDM_ROOT/zarf-create-witness.json" ]]; then
