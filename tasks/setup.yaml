@@ -8,7 +8,7 @@ tasks:
       version:
         description: Version of UDS CLI to install
         # renovate: datasource=github-releases depName=defenseunicorns/uds-cli
-        default: v0.30.3
+        default: v0.30.4
     actions:
       - description: Install UDS CLI
         shell:
