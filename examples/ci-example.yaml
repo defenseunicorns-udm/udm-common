@@ -59,21 +59,21 @@ jobs:
           path: .
 
       - name: Security Scan
-        id: scan
-        uses: defenseunicorns-udm/udm-common/.github/actions/security-scan@313297d92b3b10e1d86b18c5861a3099b46b7377 # v0.6.0
+        run: |
+          uds run scan:security
 
       - name: Vouch
-        uses: defenseunicorns-udm/udm-common/.github/actions/vouch@313297d92b3b10e1d86b18c5861a3099b46b7377 # v0.6.0
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          attestations: ${{ steps.scan.outputs.witness-files }},lint-witness.json
-          sarif-files: ${{ steps.scan.outputs.sarif-files }}
-          olm-cat: cat-api.uds-mil.us
-          olm-org: <your-org-name>
+        run: |
+          uds run vouch:package \
+            --with github_token="${{ secrets.GITHUB_TOKEN }}" \
+            --with attestations="gitleaks-witness.json,opengrep-witness.json,lint-witness.json" \
+            --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
+            --with olm_cat=cat-api.uds-mil.us \
+            --with olm_org="<your-org-name>"
 
       - name: Publish
-        uses: defenseunicorns-udm/udm-common/.github/actions/publish@313297d92b3b10e1d86b18c5861a3099b46b7377 # v0.6.0
-        with:
-          registry-org: <your-org-name>
-          registry-user-id: ${{ secrets.REGISTRY_USER_ID }}
-          registry-password: ${{ secrets.REGISTRY_PASSWORD }}
+        run: |
+          uds run publish:zarf-package \
+            --with registry_org="<your-org-name>" \
+            --with registry_user_id="${{ secrets.REGISTRY_USER_ID }}" \
+            --with registry_password="${{ secrets.REGISTRY_PASSWORD }}"

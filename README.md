@@ -15,9 +15,13 @@ publishes Zarf packages to the UDS MIL registry.
 | [`publish`](.github/actions/publish/action.yaml) | Publishes a vouched Zarf package to the UDS registry |
 | [`verify-permissions`](.github/actions/verify-permissions/action.yaml) | Validates required GitHub Actions OIDC permissions are present |
 
+The GitHub Actions are thin wrappers around the shared UDS tasks in this repo.
+Prefer calling tasks directly in workflows when the task file is available; use
+the actions when you need a packaged GitHub Actions interface.
+
 ## Quickstart
 
-Reference actions and workflows from this repo using the full path and a ref:
+Reference actions or shared task sources from this repo using the full path and a ref:
 
 ```yaml
 uses: defenseunicorns-udm/udm-common/.github/actions/security-scan@313297d92b3b10e1d86b18c5861a3099b46b7377 # v0.6.0
@@ -59,26 +63,25 @@ jobs:
         with:
           name: lint-artifacts
           path: .
-      - id: scan
-        uses: defenseunicorns-udm/udm-common/.github/actions/security-scan@313297d92b3b10e1d86b18c5861a3099b46b7377 # v0.6.0
-      - uses: defenseunicorns-udm/udm-common/.github/actions/vouch@313297d92b3b10e1d86b18c5861a3099b46b7377 # v0.6.0
-        with:
-          attestations: "${{ steps.scan.outputs.witness-files }},lint-witness.json"
-          sarif-files: "${{ steps.scan.outputs.sarif-files }}"
-          olm-cat: cat-api.uds-mil.us
-          olm-org: <your-org-name>
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: uds run scan:security
+      - run: |
+          uds run vouch:package \
+            --with github_token="${{ secrets.GITHUB_TOKEN }}" \
+            --with attestations="gitleaks-witness.json,opengrep-witness.json,lint-witness.json" \
+            --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
+            --with olm_cat=cat-api.uds-mil.us \
+            --with olm_org="<your-org-name>"
 
-      - uses: defenseunicorns-udm/udm-common/.github/actions/publish@313297d92b3b10e1d86b18c5861a3099b46b7377 # v0.6.0
-        with:
-          registry-org: <your-org-name>
-          registry-user-id: ${{ secrets.REGISTRY_USER_ID }}
-          registry-password: ${{ secrets.REGISTRY_PASSWORD }}
+      - run: |
+          uds run publish:zarf-package \
+            --with registry_org="<your-org-name>" \
+            --with registry_user_id="${{ secrets.REGISTRY_USER_ID }}" \
+            --with registry_password="${{ secrets.REGISTRY_PASSWORD }}"
 ```
 
 ### Monorepo
 
-Use `zarf-path` to build and publish multiple services in a matrix:
+Use `zarf_path` to build and publish multiple services in a matrix:
 
 ```yaml
 jobs:
@@ -87,43 +90,39 @@ jobs:
       matrix:
         service: [api, worker, frontend]
     steps:
-      - id: scan
-        uses: defenseunicorns-udm/udm-common/.github/actions/security-scan@313297d92b3b10e1d86b18c5861a3099b46b7377 # v0.6.0
-        with:
-          opengrep-scan-path: services/${{ matrix.service }}
-      - uses: defenseunicorns-udm/udm-common/.github/actions/vouch@313297d92b3b10e1d86b18c5861a3099b46b7377 # v0.6.0
-        with:
-          attestations: "${{ steps.scan.outputs.witness-files }}"
-          sarif-files: "${{ steps.scan.outputs.sarif-files }}"
-          zarf-path: services/${{ matrix.service }}
-          olm-cat: cat-api.uds-mil.us
-          olm-org: <your-org-name>
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: defenseunicorns-udm/udm-common/.github/actions/publish@313297d92b3b10e1d86b18c5861a3099b46b7377 # v0.6.0
-        with:
-          registry-org: <your-org-name>
-          registry-user-id: ${{ secrets.REGISTRY_USER_ID }}
-          registry-password: ${{ secrets.REGISTRY_PASSWORD }}
+      - run: |
+          uds run scan:security \
+            --with opengrep_scan_path="services/${{ matrix.service }}"
+      - run: |
+          uds run vouch:package \
+            --with github_token="${{ secrets.GITHUB_TOKEN }}" \
+            --with attestations="gitleaks-witness.json,opengrep-witness.json" \
+            --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
+            --with zarf_path="services/${{ matrix.service }}" \
+            --with olm_cat=cat-api.uds-mil.us \
+            --with olm_org="<your-org-name>"
+      - run: |
+          uds run publish:zarf-package \
+            --with registry_org="<your-org-name>" \
+            --with registry_user_id="${{ secrets.REGISTRY_USER_ID }}" \
+            --with registry_password="${{ secrets.REGISTRY_PASSWORD }}"
 ```
 
 ## Custom Build Commands
 
-By default, the `vouch` action and `build:zarf-package` task run `uds zarf package create`.
-If your build requires a custom script (pre-processing, non-standard flags, multi-step build), pass `build-command` to the `vouch` action or `build_command` to the task directly.
-
-**GitHub Actions:**
-```yaml
-- uses: defenseunicorns-udm/udm-common/.github/actions/vouch@313297d92b3b10e1d86b18c5861a3099b46b7377 # v0.6.0
-  with:
-    build-command: ./scripts/my-build.sh
-    attestations: "${{ steps.scan.outputs.witness-files }},lint-witness.json"
-    sarif-files: "${{ steps.scan.outputs.sarif-files }}"
-    olm-cat: cat-api.uds-mil.us
-    olm-org: <your-org-name>
-    github-token: ${{ secrets.GITHUB_TOKEN }}
-```
+By default, the `vouch:package` and `build:zarf-package` tasks run `uds zarf package create`.
+If your build requires a custom script (pre-processing, non-standard flags, multi-step build), pass `build_command` to the task.
 
 **UDS task:**
+```yaml
+- task: vouch:package
+  with:
+    build_command: ./scripts/my-build.sh
+    olm_cat: cat-api.uds-mil.us
+    olm_org: <your-org-name>
+```
+
+**Build-only task:**
 ```yaml
 - task: build:zarf-package
   with:
@@ -169,7 +168,7 @@ uds run build:zarf-package --with build_command="./scripts/my-build.sh"
 uds run vouch:package \
   --with zarf_path=. \
   --with olm_cat=cat-api.uds-mil.us \
-  --with olm_org=<your-org-name> \
+  --with olm_org="<your-org-name>" \
   --with github_token="$GITHUB_TOKEN"
 ```
 
@@ -179,7 +178,7 @@ uds run vouch:package \
 uds run vouch:package \
   --with build_command="./scripts/my-build.sh" \
   --with olm_cat=cat-api.uds-mil.us \
-  --with olm_org=<your-org-name> \
+  --with olm_org="<your-org-name>" \
   --with github_token="$GITHUB_TOKEN"
 ```
 
@@ -192,8 +191,10 @@ uds run publish:zarf-package --with dry_run=true
 Notes:
 
 - `build_command` replaces the default `uds zarf package create` flow. If you use `--with build_command=...`, `--with zarf_path` and `--with architecture` are ignored by `build:zarf-package`.
-- `zarf_flavor` applies to normal `uds zarf package create` builds. It has no effect when the build is driven by a custom `build_command`.
-- For local runs without Sigstore/OIDC, pass `--with enable_sigstore=false` and `--with witness_key_path=/path/to/key` to `build:zarf-package` or `vouch:package`.
+- `zarf-flavor` / `zarf_flavor` applies to normal `uds zarf package create` builds. Omit it when your package does not define a flavor. It has no effect when the build is driven by a custom `build_command`.
+- In task-based workflows, pass package flavor as `--with zarf_flavor=upstream`; in the `vouch` GitHub Action wrapper, pass `zarf-flavor: upstream`.
+- For local runs without Sigstore/OIDC, pass `--with enable_sigstore=false` to `build:zarf-package`, `vouch:package`, `scan-and-vouch`, or `pipeline`. Add `--with witness_key_path=/path/to/key` when you still want local Witness signing.
+- `enable_archivista` is available on task-based builds and pipelines and is forwarded to the build attestation step.
 
 ## Required Secrets
 
