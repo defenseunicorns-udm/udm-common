@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0](https://github.com/defenseunicorns-udm/udm-common/compare/v0.6.0...v0.7.0) (2026-05-11)
+
+
+### Features
+
+* **tasks:** add local pipeline foundation with setup and security scanning ([#44](https://github.com/defenseunicorns-udm/udm-common/issues/44)) ([ff38a18](https://github.com/defenseunicorns-udm/udm-common/commit/ff38a189ebe812fda31b272bc82125c61d6e9415))
+
 ## [0.6.0](https://github.com/defenseunicorns-udm/udm-common/compare/v0.5.1...v0.6.0) (2026-04-23)
 
 
