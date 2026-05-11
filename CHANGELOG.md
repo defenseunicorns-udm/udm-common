@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.1](https://github.com/defenseunicorns-udm/udm-common/compare/v0.7.0...v0.7.1) (2026-05-11)
+
+
+### Bug Fixes
+
+* --suffix not valid for mktemp on mac ([#61](https://github.com/defenseunicorns-udm/udm-common/issues/61)) ([4ee72b9](https://github.com/defenseunicorns-udm/udm-common/commit/4ee72b9078001520e72ac4b4a684906d95aea41d))
+
 ## [0.7.0](https://github.com/defenseunicorns-udm/udm-common/compare/v0.6.0...v0.7.0) (2026-05-11)
 
 
