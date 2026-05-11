@@ -167,7 +167,7 @@ tasks:
           fi
 
           echo "==> Testing scan:security (ephemeral key)"
-          WITNESS_TEST_KEY=$(mktemp --suffix=.pem)
+          WITNESS_TEST_KEY=$(mktemp /tmp/witness-XXXXXX.pem)
           openssl genpkey -algorithm ED25519 -out "$WITNESS_TEST_KEY" 2>/dev/null
           rm -f gitleaks.sarif.json gitleaks-witness.json opengrep.sarif.json opengrep-witness.json
           uds run scan:security \
@@ -390,7 +390,7 @@ tasks:
           ZARF_FLAVOR="${{ .inputs.zarf_flavor }}"
           EPHEMERAL_KEY=""
           if [ -z "$WITNESS_KEY_PATH" ]; then
-            EPHEMERAL_KEY=$(mktemp --suffix=.pem)
+            EPHEMERAL_KEY=$(mktemp /tmp/ephemeral-XXXXXX.pem)
             openssl genpkey -algorithm ED25519 -out "$EPHEMERAL_KEY" 2>/dev/null
             WITNESS_KEY_PATH="$EPHEMERAL_KEY"
           fi
