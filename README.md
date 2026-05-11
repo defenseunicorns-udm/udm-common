@@ -24,7 +24,7 @@ the actions when you need a packaged GitHub Actions interface.
 Reference actions or shared task sources from this repo using the full path and a ref:
 
 ```yaml
-uses: defenseunicorns-udm/udm-common/.github/actions/security-scan@313297d92b3b10e1d86b18c5861a3099b46b7377 # v0.6.0
+uses: defenseunicorns-udm/udm-common/.github/actions/security-scan@ef02d5136f61d050c0461ba6e3f477894dfe0726 # v0.7.0
 ```
 
 ### Minimal CI workflow (GitHub example)
@@ -38,7 +38,7 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v6.0.2
-      - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@313297d92b3b10e1d86b18c5861a3099b46b7377 # v0.6.0
+      - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@ef02d5136f61d050c0461ba6e3f477894dfe0726 # v0.7.0
       - uses: testifysec/witness-run-action@7aa15e327829f1f2a523365c564c948d5dde69dd
         with:
           step: lint
@@ -58,7 +58,7 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v6.0.2
-      - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@313297d92b3b10e1d86b18c5861a3099b46b7377 # v0.6.0
+      - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@ef02d5136f61d050c0461ba6e3f477894dfe0726 # v0.7.0
       - uses: actions/download-artifact@v8.0.1
         with:
           name: lint-artifacts
