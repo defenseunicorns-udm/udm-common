@@ -21,7 +21,7 @@ tasks:
       - task: shell
       - task: tasks
 
-  - name: lint:attested
+  - name: lint-attested
     description: Run lint task with Witness attestation, producing lint-witness.json
     inputs:
       witness_key_path:

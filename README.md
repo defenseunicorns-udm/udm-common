@@ -40,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6.0.2
       - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@189ad0d6c780416eb929a15fad22e636e0a9f62c # v0.7.1
-      - run: uds run lint:attested
+      - run: uds run lint-attested
       - run: uds run scan:security
       - run: |
           uds run vouch:package \
@@ -121,7 +121,7 @@ uds run lint
 - Run lint with Witness attestation (requires a local signing key or Sigstore OIDC):
 
 ```bash
-uds run lint:attested --with enable_sigstore=false --with witness_key_path=/path/to/key
+uds run lint-attested --with enable_sigstore=false --with witness_key_path=/path/to/key
 ```
 
 - Build a Zarf package locally with the shared `build:zarf-package` task:
@@ -188,9 +188,9 @@ Notes:
 
 ## Lint Task
 
-The CI workflow calls `uds run lint:attested`, which wraps your repo's `lint`
+The CI workflow calls `uds run lint-attested`, which wraps your repo's `lint`
 task with Witness attestation. **You must define a `lint` task in your repo's
-`tasks.yaml`** — `lint:attested` will call it. See
+`tasks.yaml`** — `lint-attested` will call it. See
 [`examples/tasks.yaml`](examples/tasks.yaml) for patterns covering Python, Go,
 TypeScript, and monorepos.
 
