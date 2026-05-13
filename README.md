@@ -35,19 +35,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
     steps:
       - uses: actions/checkout@v6.0.2
       - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@189ad0d6c780416eb929a15fad22e636e0a9f62c # v0.7.1
-      - uses: testifysec/witness-run-action@7aa15e327829f1f2a523365c564c948d5dde69dd
-        with:
-          step: lint
-          command: uds run lint        # defined in your tasks.yaml
-          outfile: lint-witness.json
-      - uses: actions/upload-artifact@v7.0.1
-        with:
-          name: lint-artifacts
-          path: lint-witness.json
+      - run: uds run lint
 
   scan-vouch-publish:
     needs: lint
@@ -59,19 +50,14 @@ jobs:
     steps:
       - uses: actions/checkout@v6.0.2
       - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@189ad0d6c780416eb929a15fad22e636e0a9f62c # v0.7.1
-      - uses: actions/download-artifact@v8.0.1
-        with:
-          name: lint-artifacts
-          path: .
       - run: uds run scan:security
       - run: |
           uds run vouch:package \
             --with github_token="${{ secrets.GITHUB_TOKEN }}" \
-            --with attestations="gitleaks-witness.json,opengrep-witness.json,lint-witness.json" \
+            --with attestations="gitleaks-witness.json,opengrep-witness.json" \
             --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
             --with olm_cat=cat-api.uds-mil.us \
             --with olm_org="<your-org-name>"
-
       - run: |
           uds run publish:zarf-package \
             --with registry_org="<your-org-name>" \
