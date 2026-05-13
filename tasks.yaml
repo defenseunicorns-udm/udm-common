@@ -21,6 +21,65 @@ tasks:
       - task: shell
       - task: tasks
 
+  - name: lint:attested
+    description: Run lint task with Witness attestation, producing lint-witness.json
+    inputs:
+      witness_key_path:
+        description: Path to a local signing key for Witness. Leave empty in CI (Sigstore is used instead).
+        default: ""
+      witness_workingdir:
+        description: Directory for Witness to run the attested command from.
+        default: ""
+      enable_sigstore:
+        description: Sign attestations with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions).
+        default: "true"
+    actions:
+      - description: Install Witness and run attested lint
+        shell:
+          linux: bash
+          darwin: bash
+        cmd: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+
+          WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
+          WITNESS_WORKINGDIR="${{ .inputs.witness_workingdir }}"
+          ENABLE_SIGSTORE="${{ .inputs.enable_sigstore }}"
+          OUTPUT_DIR="$(pwd)"
+          LINT_WITNESS="${OUTPUT_DIR}/lint-witness.json"
+          rm -f "$LINT_WITNESS"
+
+          WITNESS_ARGS=(-a=environment -a=git)
+          SHOULD_WITNESS="false"
+
+          if [ -n "$WITNESS_KEY_PATH" ]; then
+            SHOULD_WITNESS="true"
+            if [ ! -f "$WITNESS_KEY_PATH" ]; then
+              echo "Witness key file does not exist: $WITNESS_KEY_PATH"
+              exit 1
+            fi
+            WITNESS_ARGS+=(--signer-file-key-path "$WITNESS_KEY_PATH")
+          elif [ "$ENABLE_SIGSTORE" = "true" ]; then
+            SHOULD_WITNESS="true"
+            WITNESS_ARGS+=(
+              --signer-fulcio-url=https://fulcio.sigstore.dev
+              --signer-fulcio-oidc-client-id=sigstore
+              --signer-fulcio-oidc-issuer=https://token.actions.githubusercontent.com
+              --timestamp-servers=https://timestamp.sigstore.dev/api/v1/timestamp
+            )
+          fi
+          if [ -n "$WITNESS_WORKINGDIR" ]; then
+            WITNESS_ARGS+=(--workingdir "$WITNESS_WORKINGDIR")
+          fi
+
+          if [ "$SHOULD_WITNESS" = "true" ]; then
+            uds run setup:witness
+            witness run "${WITNESS_ARGS[@]}" -s=lint --outfile="$LINT_WITNESS" -- uds run lint
+          else
+            echo "No signing key or Sigstore enabled. Running lint without Witness attestation."
+            uds run lint
+          fi
+
   - name: yaml
     description: Run YAML linting checks
     actions:

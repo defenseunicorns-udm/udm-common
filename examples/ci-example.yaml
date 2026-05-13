@@ -10,25 +10,7 @@ on:
       - main
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-
-      - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: UDS CLI Setup
-        uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@189ad0d6c780416eb929a15fad22e636e0a9f62c # v0.7.1
-
-      # Lint logic is owned by the calling repo via a UDS task.
-      # Define a 'lint' task in your tasks.yaml that runs your linter(s).
-      - name: Lint
-        run: uds run lint
-
-  scan-vouch-publish:
-    needs: lint
+  ci:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -41,15 +23,19 @@ jobs:
       - name: UDS CLI Setup
         uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@189ad0d6c780416eb929a15fad22e636e0a9f62c # v0.7.1
 
+      # lint:attested wraps your repo's 'lint' task with Witness attestation.
+      # You MUST define a 'lint' task in your tasks.yaml — see examples/tasks.yaml.
+      - name: Lint
+        run: uds run lint:attested
+
       - name: Security Scan
-        run: |
-          uds run scan:security
+        run: uds run scan:security
 
       - name: Vouch
         run: |
           uds run vouch:package \
             --with github_token="${{ secrets.GITHUB_TOKEN }}" \
-            --with attestations="gitleaks-witness.json,opengrep-witness.json" \
+            --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json" \
             --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
             --with olm_cat=cat-api.uds-mil.us \
             --with olm_org="<your-org-name>"
