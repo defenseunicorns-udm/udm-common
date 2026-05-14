@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.1](https://github.com/defenseunicorns-udm/udm-common/compare/v0.9.0...v0.9.1) (2026-05-14)
+
+
+### Bug Fixes
+
+* **docs:** replace action-based docs with tasks-based flow ([#70](https://github.com/defenseunicorns-udm/udm-common/issues/70)) ([564fe46](https://github.com/defenseunicorns-udm/udm-common/commit/564fe4625dc470794584a442b20d12f26c0e7322))
+
 ## [0.9.0](https://github.com/defenseunicorns-udm/udm-common/compare/v0.8.0...v0.9.0) (2026-05-14)
 
 
