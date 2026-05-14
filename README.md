@@ -24,7 +24,7 @@ the actions when you need a packaged GitHub Actions interface.
 Reference actions or shared task sources from this repo using the full path and a ref:
 
 ```yaml
-uses: defenseunicorns-udm/udm-common/.github/actions/security-scan@189ad0d6c780416eb929a15fad22e636e0a9f62c # v0.7.1
+uses: defenseunicorns-udm/udm-common/.github/actions/security-scan@fa7d3a72224cf80685aa7d3872f23ed981e7106b # v0.8.0
 ```
 
 ### Minimal CI workflow (GitHub example)
@@ -39,7 +39,7 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v6.0.2
-      - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@189ad0d6c780416eb929a15fad22e636e0a9f62c # v0.7.1
+      - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@fa7d3a72224cf80685aa7d3872f23ed981e7106b # v0.8.0
       - run: uds run lint-attested
       - run: uds run scan:security
       - run: |
