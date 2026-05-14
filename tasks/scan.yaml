@@ -14,9 +14,33 @@ tasks:
           linux: bash
           darwin: bash
         cmd: |
+          get_os() {
+            case "$(uname -s)" in
+              Linux)  echo "linux" ;;
+              Darwin) echo "darwin" ;;
+              *) echo "Unsupported OS: $(uname -s)" >&2; return 1 ;;
+            esac
+          }
+          get_arch() {
+            case "$(uname -m)" in
+              x86_64)        echo "amd64" ;;
+              aarch64|arm64) echo "arm64" ;;
+              *) echo "Unsupported architecture: $(uname -m)" >&2; return 1 ;;
+            esac
+          }
+          install_from_tarball() {
+            local name="$1" url="$2" inner="${3:-$1}"
+            local tmp
+            tmp="$(mktemp -d)"
+            # shellcheck disable=SC2064
+            trap "rm -rf '$tmp'" RETURN
+            curl -fSL "$url" | tar -xz -C "$tmp" "$inner"
+            mkdir -p "$HOME/.local/bin"
+            mv "$tmp/$inner" "$HOME/.local/bin/$name"
+            chmod +x "$HOME/.local/bin/$name"
+            echo "$name installed to $HOME/.local/bin/$name"
+          }
           VERSION="${{ .inputs.version }}"
-          # shellcheck source=scripts/install.sh
-          source scripts/install.sh
           OS="$(get_os)"
           ARCH_RAW="$(get_arch)"
           case "$ARCH_RAW" in
@@ -39,8 +63,27 @@ tasks:
           linux: bash
           darwin: bash
         cmd: |
-          # shellcheck source=scripts/install.sh
-          source scripts/install.sh
+          get_os() {
+            case "$(uname -s)" in
+              Linux)  echo "linux" ;;
+              Darwin) echo "darwin" ;;
+              *) echo "Unsupported OS: $(uname -s)" >&2; return 1 ;;
+            esac
+          }
+          get_arch() {
+            case "$(uname -m)" in
+              x86_64)        echo "amd64" ;;
+              aarch64|arm64) echo "arm64" ;;
+              *) echo "Unsupported architecture: $(uname -m)" >&2; return 1 ;;
+            esac
+          }
+          install_binary() {
+            local name="$1" url="$2"
+            mkdir -p "$HOME/.local/bin"
+            curl -fSL "$url" -o "$HOME/.local/bin/$name"
+            chmod +x "$HOME/.local/bin/$name"
+            echo "$name installed to $HOME/.local/bin/$name"
+          }
           OS="$(get_os)"
           ARCH="$(get_arch)"
           if [ "$OS" != "linux" ] || [ "$ARCH" != "amd64" ]; then

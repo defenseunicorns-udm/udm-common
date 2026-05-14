@@ -31,26 +31,7 @@ uses: defenseunicorns-udm/udm-common/.github/actions/security-scan@189ad0d6c7804
 
 ```yaml
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@v6.0.2
-      - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@189ad0d6c780416eb929a15fad22e636e0a9f62c # v0.7.1
-      - uses: testifysec/witness-run-action@7aa15e327829f1f2a523365c564c948d5dde69dd
-        with:
-          step: lint
-          command: uds run lint        # defined in your tasks.yaml
-          outfile: lint-witness.json
-      - uses: actions/upload-artifact@v7.0.1
-        with:
-          name: lint-artifacts
-          path: lint-witness.json
-
-  scan-vouch-publish:
-    needs: lint
+  ci:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -59,19 +40,15 @@ jobs:
     steps:
       - uses: actions/checkout@v6.0.2
       - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@189ad0d6c780416eb929a15fad22e636e0a9f62c # v0.7.1
-      - uses: actions/download-artifact@v8.0.1
-        with:
-          name: lint-artifacts
-          path: .
+      - run: uds run lint-attested
       - run: uds run scan:security
       - run: |
           uds run vouch:package \
             --with github_token="${{ secrets.GITHUB_TOKEN }}" \
-            --with attestations="gitleaks-witness.json,opengrep-witness.json,lint-witness.json" \
+            --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json" \
             --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
             --with olm_cat=cat-api.uds-mil.us \
             --with olm_org="<your-org-name>"
-
       - run: |
           uds run publish:zarf-package \
             --with registry_org="<your-org-name>" \
@@ -135,10 +112,16 @@ The custom command runs under Witness attestation — the resulting `zarf-create
 
 Use the UDS CLI to execute tasks locally before you push or run CI.
 
-- Run lint and generate a Witness attestation:
+- Run lint:
 
 ```bash
 uds run lint
+```
+
+- Run lint with Witness attestation (requires a local signing key or Sigstore OIDC):
+
+```bash
+uds run lint-attested --with enable_sigstore=false --with witness_key_path=/path/to/key
 ```
 
 - Build a Zarf package locally with the shared `build:zarf-package` task:
@@ -205,9 +188,11 @@ Notes:
 
 ## Lint Task
 
-The example CI workflow calls `uds run lint` — you must define a `lint`
-task in your repo's `tasks.yaml`. See [`examples/tasks.yaml`](examples/tasks.yaml)
-for patterns covering Python, Go, TypeScript, and monorepos.
+The CI workflow calls `uds run lint-attested`, which wraps your repo's `lint`
+task with Witness attestation. **You must define a `lint` task in your repo's
+`tasks.yaml`** — `lint-attested` will call it. See
+[`examples/tasks.yaml`](examples/tasks.yaml) for patterns covering Python, Go,
+TypeScript, and monorepos.
 
 ## Examples
 

@@ -1,9 +1,8 @@
 # Example UDS tasks file for use with udm-common shared workflows.
 #
-# The ci.yaml workflow calls `uds run lint` to produce a Witness attestation.
-# You must define a task named `lint` in your repo's tasks.yaml that runs
-# your linter(s). The task should exit non-zero on lint failures so the
-# workflow fails appropriately.
+# The CI workflow calls `uds run lint-attested`, which wraps your `lint` task
+# with Witness attestation. You MUST define a task named `lint` in your repo's
+# tasks.yaml — lint-attested calls it. The task must exit non-zero on failures.
 #
 # Copy the relevant section below into your repo's tasks.yaml and adapt as needed.
 
