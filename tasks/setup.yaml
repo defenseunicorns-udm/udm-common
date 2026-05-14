@@ -103,7 +103,7 @@ tasks:
       version:
         description: Witness version (MAJOR.MINOR.PATCH, no v prefix)
         # renovate: datasource=github-releases depName=in-toto/witness extractVersion=^v(?<version>.+)$
-        default: 0.9.2
+        default: 0.11.0
       cosign_version:
         description: Version of cosign to install if not already on PATH (no v prefix)
         # renovate: datasource=github-releases depName=sigstore/cosign extractVersion=^v(?<version>.+)$
@@ -186,12 +186,10 @@ tasks:
           echo "Downloading witness ${VERSION} (${PLATFORM}/${ARCH_NAME})"
           curl -fSL "${RELEASE_BASE}/${ARTIFACT}" -o "${TEMP_DIR}/${ARTIFACT}"
 
-          curl -fSL "${RELEASE_BASE}/${ARTIFACT}.pem" -o "${TEMP_DIR}/${ARTIFACT}.pem"
-          curl -fSL "${RELEASE_BASE}/${ARTIFACT}.sig" -o "${TEMP_DIR}/${ARTIFACT}.sig"
+          curl -fSL "${RELEASE_BASE}/${ARTIFACT}.sigstore.json" -o "${TEMP_DIR}/${ARTIFACT}.sigstore.json"
           CERT_IDENTITY="https://github.com/in-toto/witness/.github/workflows/release.yml@refs/tags/v${VERSION}"
           cosign verify-blob \
-            --certificate       "${TEMP_DIR}/${ARTIFACT}.pem" \
-            --signature         "${TEMP_DIR}/${ARTIFACT}.sig" \
+            --bundle            "${TEMP_DIR}/${ARTIFACT}.sigstore.json" \
             --certificate-identity "$CERT_IDENTITY" \
             --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
             "${TEMP_DIR}/${ARTIFACT}"
