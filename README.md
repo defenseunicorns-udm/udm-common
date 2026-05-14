@@ -43,7 +43,7 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@189ad0d6c780416eb929a15fad22e636e0a9f62c # v0.7.1
+      - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@dc74a91514f881a5937351006201b1c197474f7e # v0.9.0
       - run: uds run attest:lint
       - run: uds run scan:security
       - run: |
