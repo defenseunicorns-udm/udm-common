@@ -112,6 +112,9 @@ tasks:
       enable_sigstore:
         description: Sign the attestation with Sigstore/Fulcio.
         default: "true"
+      fulcio_oidc_issuer:
+        description: OIDC issuer URL for Sigstore/Fulcio signing. Override for non-GitHub CI providers (e.g. https://gitlab.com).
+        default: "https://token.actions.githubusercontent.com"
     actions:
       - description: Install tools and run attested Gitleaks scan
         shell:
@@ -125,6 +128,7 @@ tasks:
           WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
           WITNESS_WORKINGDIR="${{ .inputs.witness_workingdir }}"
           ENABLE_SIGSTORE="${{ .inputs.enable_sigstore }}"
+          FULCIO_OIDC_ISSUER="${{ .inputs.fulcio_oidc_issuer }}"
           OUTPUT_DIR="$(pwd)"
           GITLEAKS_SARIF="${OUTPUT_DIR}/gitleaks.sarif.json"
           GITLEAKS_WITNESS="${OUTPUT_DIR}/gitleaks-witness.json"
@@ -150,7 +154,7 @@ tasks:
             WITNESS_ARGS+=(
               --signer-fulcio-url=https://fulcio.sigstore.dev
               --signer-fulcio-oidc-client-id=sigstore
-              --signer-fulcio-oidc-issuer=https://token.actions.githubusercontent.com
+              --signer-fulcio-oidc-issuer="$FULCIO_OIDC_ISSUER"
               --timestamp-servers=https://timestamp.sigstore.dev/api/v1/timestamp
             )
           fi
@@ -184,6 +188,9 @@ tasks:
       enable_sigstore:
         description: Sign the attestation with Sigstore/Fulcio.
         default: "false"
+      fulcio_oidc_issuer:
+        description: OIDC issuer URL for Sigstore/Fulcio signing. Override for non-GitHub CI providers (e.g. https://gitlab.com).
+        default: "https://token.actions.githubusercontent.com"
     actions:
       - description: Install tools and run attested OpenGrep scan
         shell:
@@ -204,6 +211,7 @@ tasks:
           WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
           WITNESS_WORKINGDIR="${{ .inputs.witness_workingdir }}"
           ENABLE_SIGSTORE="${{ .inputs.enable_sigstore }}"
+          FULCIO_OIDC_ISSUER="${{ .inputs.fulcio_oidc_issuer }}"
           OUTPUT_DIR="$(pwd)"
           OPENGREP_SARIF="${OUTPUT_DIR}/opengrep.sarif.json"
           OPENGREP_WITNESS="${OUTPUT_DIR}/opengrep-witness.json"
@@ -229,7 +237,7 @@ tasks:
             WITNESS_ARGS+=(
               --signer-fulcio-url=https://fulcio.sigstore.dev
               --signer-fulcio-oidc-client-id=sigstore
-              --signer-fulcio-oidc-issuer=https://token.actions.githubusercontent.com
+              --signer-fulcio-oidc-issuer="$FULCIO_OIDC_ISSUER"
               --timestamp-servers=https://timestamp.sigstore.dev/api/v1/timestamp
             )
           fi
@@ -267,6 +275,9 @@ tasks:
         default: "false"
       run_opengrep:
         default: "true"
+      fulcio_oidc_issuer:
+        description: OIDC issuer URL for Sigstore/Fulcio signing. Override for non-GitHub CI providers (e.g. https://gitlab.com).
+        default: "https://token.actions.githubusercontent.com"
     actions:
       - description: Run Gitleaks and optionally OpenGrep with Witness attestation
         shell:
@@ -283,12 +294,14 @@ tasks:
           WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
           WITNESS_WORKINGDIR="${{ .inputs.witness_workingdir }}"
           ENABLE_SIGSTORE="${{ .inputs.enable_sigstore }}"
+          FULCIO_OIDC_ISSUER="${{ .inputs.fulcio_oidc_issuer }}"
           RUN_OPENGREP="${{ .inputs.run_opengrep }}"
 
           GITLEAKS_OPTS=(
             --with gitleaks_version="$GITLEAKS_VERSION"
             --with gitleaks_scan_path="$GITLEAKS_SCAN_PATH"
             --with enable_sigstore="$ENABLE_SIGSTORE"
+            --with fulcio_oidc_issuer="$FULCIO_OIDC_ISSUER"
           )
           [ -n "$WITNESS_KEY_PATH" ] && GITLEAKS_OPTS+=(--with witness_key_path="$WITNESS_KEY_PATH")
           [ -n "$WITNESS_WORKINGDIR" ] && GITLEAKS_OPTS+=(--with witness_workingdir="$WITNESS_WORKINGDIR")
@@ -300,6 +313,7 @@ tasks:
               --with opengrep_version="$OPENGREP_VERSION"
               --with opengrep_scan_path="$OPENGREP_SCAN_PATH"
               --with enable_sigstore="$ENABLE_SIGSTORE"
+              --with fulcio_oidc_issuer="$FULCIO_OIDC_ISSUER"
             )
             [ -n "$WITNESS_KEY_PATH" ] && OPENGREP_OPTS+=(--with witness_key_path="$WITNESS_KEY_PATH")
             [ -n "$WITNESS_WORKINGDIR" ] && OPENGREP_OPTS+=(--with witness_workingdir="$WITNESS_WORKINGDIR")

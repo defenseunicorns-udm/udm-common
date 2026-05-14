@@ -184,6 +184,41 @@ Notes:
 - For local runs without Sigstore/OIDC, pass `--with enable_sigstore=false`. Add `--with witness_key_path=/path/to/key` when you still want local Witness signing.
 - `enable_archivista` is available on task-based builds and pipelines and is forwarded to the build attestation step.
 
+## CI Provider Configuration
+
+By default, Sigstore signing uses `https://token.actions.githubusercontent.com` as the Fulcio OIDC issuer, which is correct for GitHub Actions. To use Sigstore attestation from another CI provider, pass `fulcio_oidc_issuer` with the provider's OIDC issuer URL.
+
+Supported by: `attest:lint`, `scan:security`, `scan:gitleaks`, `scan:opengrep`, `build:zarf-package`, `vouch:package`.
+
+### Configuring Sigstore for GitLab CI
+
+The snippets below show only the Sigstore-relevant configuration — they are not a complete GitLab CI pipeline. GitLab requires OIDC tokens to be explicitly requested via `id_tokens`; without this, `enable_sigstore=true` will fail.
+
+```yaml
+# .gitlab-ci.yml — Sigstore OIDC token request (add to any job that signs with Witness)
+id_tokens:
+  SIGSTORE_ID_TOKEN:
+    aud: sigstore
+
+scan:
+  script:
+    - uds run scan:security \
+        --with enable_sigstore=true \
+        --with fulcio_oidc_issuer="https://gitlab.com"
+```
+
+```yaml
+# tasks.yaml — pass fulcio_oidc_issuer through to vouch
+- task: vouch:package
+  with:
+    enable_sigstore: "true"
+    fulcio_oidc_issuer: https://gitlab.com
+    olm_cat: cat-api.uds-mil.us
+    olm_org: <your-org-name>
+```
+
+For a self-hosted GitLab instance, replace `https://gitlab.com` with your instance URL.
+
 ## Required Secrets
 
 | Secret | Used By | Description |

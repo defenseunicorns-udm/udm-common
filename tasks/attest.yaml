@@ -14,6 +14,9 @@ tasks:
       enable_sigstore:
         description: Sign attestations with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions).
         default: "true"
+      fulcio_oidc_issuer:
+        description: OIDC issuer URL for Sigstore/Fulcio signing. Override for non-GitHub CI providers (e.g. https://gitlab.com).
+        default: "https://token.actions.githubusercontent.com"
     actions:
       - description: Install Witness and run attested lint
         shell:
@@ -45,7 +48,7 @@ tasks:
             WITNESS_ARGS+=(
               --signer-fulcio-url=https://fulcio.sigstore.dev
               --signer-fulcio-oidc-client-id=sigstore
-              --signer-fulcio-oidc-issuer=https://token.actions.githubusercontent.com
+              --signer-fulcio-oidc-issuer="${{ .inputs.fulcio_oidc_issuer }}"
               --timestamp-servers=https://timestamp.sigstore.dev/api/v1/timestamp
             )
           fi
