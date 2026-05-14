@@ -1,8 +1,17 @@
 # Example UDS tasks file for use with udm-common shared workflows.
 #
-# The CI workflow calls `uds run lint-attested`, which wraps your `lint` task
+# The CI workflow calls `uds run attest:lint`, which wraps your `lint` task
 # with Witness attestation. You MUST define a task named `lint` in your repo's
-# tasks.yaml — lint-attested calls it. The task must exit non-zero on failures.
+# tasks.yaml — attest:lint calls it. The task must exit non-zero on failures.
+#
+# Include attest and setup from udm-common so `uds run attest:lint` is available:
+#
+# includes:
+#   - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.8.0/tasks/setup.yaml
+#   - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.8.0/tasks/attest.yaml
+#   - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.8.0/tasks/scan.yaml
+#   - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.8.0/tasks/vouch.yaml
+#   - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.8.0/tasks/publish.yaml
 #
 # Copy the relevant section below into your repo's tasks.yaml and adapt as needed.
 

@@ -23,10 +23,10 @@ jobs:
       - name: UDS CLI Setup
         uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@189ad0d6c780416eb929a15fad22e636e0a9f62c # v0.7.1
 
-      # lint-attested wraps your repo's 'lint' task with Witness attestation.
+      # attest:lint wraps your repo's 'lint' task with Witness attestation.
       # You MUST define a 'lint' task in your tasks.yaml — see examples/tasks.yaml.
       - name: Lint
-        run: uds run lint-attested
+        run: uds run attest:lint
 
       - name: Security Scan
         run: uds run scan:security
