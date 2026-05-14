@@ -47,7 +47,7 @@ tasks:
         default: "false"
       fulcio_oidc_issuer:
         description: OIDC issuer URL for Sigstore/Fulcio signing. Override for non-GitHub CI providers (e.g. https://gitlab.com).
-        default: "https://token.actions.githubusercontent.com"
+        default: https://token.actions.githubusercontent.com
       build_command:
         description: Optional. Custom build command to run under Witness attestation instead of the default 'uds zarf package create'. When set, zarf_path and architecture inputs are ignored.
         default: ""

@@ -25,7 +25,7 @@ tasks:
         default: "false"
       fulcio_oidc_issuer:
         description: OIDC issuer URL for Sigstore/Fulcio signing. Override for non-GitHub CI providers (e.g. https://gitlab.com).
-        default: "https://token.actions.githubusercontent.com"
+        default: https://token.actions.githubusercontent.com
       zarf_flavor:
         description: Optional flavor to pass to zarf package create. If not set, no flavor will be used.
         required: false

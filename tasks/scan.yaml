@@ -114,7 +114,7 @@ tasks:
         default: "true"
       fulcio_oidc_issuer:
         description: OIDC issuer URL for Sigstore/Fulcio signing. Override for non-GitHub CI providers (e.g. https://gitlab.com).
-        default: "https://token.actions.githubusercontent.com"
+        default: https://token.actions.githubusercontent.com
     actions:
       - description: Install tools and run attested Gitleaks scan
         shell:
@@ -190,7 +190,7 @@ tasks:
         default: "false"
       fulcio_oidc_issuer:
         description: OIDC issuer URL for Sigstore/Fulcio signing. Override for non-GitHub CI providers (e.g. https://gitlab.com).
-        default: "https://token.actions.githubusercontent.com"
+        default: https://token.actions.githubusercontent.com
     actions:
       - description: Install tools and run attested OpenGrep scan
         shell:
@@ -277,7 +277,7 @@ tasks:
         default: "true"
       fulcio_oidc_issuer:
         description: OIDC issuer URL for Sigstore/Fulcio signing. Override for non-GitHub CI providers (e.g. https://gitlab.com).
-        default: "https://token.actions.githubusercontent.com"
+        default: https://token.actions.githubusercontent.com
     actions:
       - description: Run Gitleaks and optionally OpenGrep with Witness attestation
         shell:
