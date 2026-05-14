@@ -42,6 +42,18 @@
         "uses: (?<depName>[\\w.-]+/[\\w.-]+)@(?<currentValue>v[\\d.]+)"
       ],
       "datasourceTemplate": "github-releases"
+    },
+    {
+      "customType": "regex",
+      "description": "Update version-tagged raw.githubusercontent.com udm-common task includes",
+      "managerFilePatterns": [
+        "/^README\\.md$/",
+        "/^examples/.*\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "https://raw\\.githubusercontent\\.com/(?<depName>defenseunicorns-udm/udm-common)/(?<currentValue>v[\\d.]+)/tasks/"
+      ],
+      "datasourceTemplate": "github-releases"
     }
   ],
   "packageRules": [
