@@ -1,8 +1,8 @@
 # udm-common
 
-Shared UDS tasks for UDS MIL customers. Provides a supply-chain-security
+Shared UDS tasks for UDS Army customers. Provides a supply-chain-security
 pipeline that lints, scans, builds, vouches, and publishes Zarf packages to
-the UDS MIL registry.
+the UDS Army registry.
 
 ## Available Task Namespaces
 
