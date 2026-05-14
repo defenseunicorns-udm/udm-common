@@ -2,6 +2,94 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.0](https://github.com/defenseunicorns-udm/udm-common/compare/v0.7.1...v0.8.0) (2026-05-14)
+
+
+### Features
+
+* add lint:attested task for witness-wrapped linting ([#65](https://github.com/defenseunicorns-udm/udm-common/issues/65)) ([f4b728f](https://github.com/defenseunicorns-udm/udm-common/commit/f4b728f31fbc5da12bc120559cefc5daa475d4df))
+
+## [0.7.1](https://github.com/defenseunicorns-udm/udm-common/compare/v0.7.0...v0.7.1) (2026-05-11)
+
+
+### Bug Fixes
+
+* --suffix not valid for mktemp on mac ([#61](https://github.com/defenseunicorns-udm/udm-common/issues/61)) ([4ee72b9](https://github.com/defenseunicorns-udm/udm-common/commit/4ee72b9078001520e72ac4b4a684906d95aea41d))
+
+## [0.7.0](https://github.com/defenseunicorns-udm/udm-common/compare/v0.6.0...v0.7.0) (2026-05-11)
+
+
+### Features
+
+* **tasks:** add local pipeline foundation with setup and security scanning ([#44](https://github.com/defenseunicorns-udm/udm-common/issues/44)) ([ff38a18](https://github.com/defenseunicorns-udm/udm-common/commit/ff38a189ebe812fda31b272bc82125c61d6e9415))
+
+  Extracts CI setup and scan behavior into reusable Maru tasks (`tasks/setup.yaml`, `tasks/scan.yaml`, `tasks/build.yaml`, `tasks/vouch.yaml`, `tasks/publish.yaml`) and adds top-level `pipeline` and `scan-and-vouch` tasks so the full CI flow can be reproduced locally with `uds run pipeline`.
+
+  - Consolidates vouch and publish into a single CI job, eliminating the Zarf package artifact upload/download handoff
+  - Witness signing works in CI (Sigstore/Fulcio via `enable_sigstore=true`) and locally (`witness_key_path`); unsigned local runs skip attestation instead of failing
+  - Local pipeline skips OLM vouch when `olm_catalog` is unset and Zarf publish when `registry` is unset
+  - Hardens attestation and SARIF handling: only forwards existing files, cleans stale Witness output before re-runs
+
+### Migration Guide
+
+**If you use the `vouch` or `publish` actions, the following changes are required:**
+
+#### `vouch` action — input renames and removals
+
+| v0.6.0 input | v0.7.0 input | Notes |
+|---|---|---|
+| `olm-catalog` | `olm-cat` | Renamed |
+| `olm-user-id` | _(removed)_ | OLM auth now handled internally |
+| `olm-password` | _(removed)_ | OLM auth now handled internally |
+| `artifact-name` | _(removed)_ | Package stays in the job workspace |
+
+The action no longer uploads the Zarf package as a GitHub Actions artifact. Remove any `actions/download-artifact` steps in downstream jobs that depended on this.
+
+#### `publish` action — artifact download removed
+
+| v0.6.0 input | v0.7.0 | Notes |
+|---|---|---|
+| `artifact-name` | _(removed)_ | Action no longer downloads a package artifact |
+
+The `publish` action now expects the Zarf package to already be in the workspace. **Vouch and publish must run in the same job.**
+
+#### Workflow pattern change
+
+Update your CI workflow to combine vouch and publish into a single job:
+
+```yaml
+# Before (v0.6.0) — separate jobs with artifact handoff
+jobs:
+  vouch:
+    steps:
+      - uses: defenseunicorns-udm/udm-common/.github/actions/vouch@v0.6.0
+        with:
+          artifact-name: zarf-package   # uploaded artifact
+          olm-catalog: cat-api.example.com
+          olm-user-id: ${{ secrets.OLM_USER }}
+          olm-password: ${{ secrets.OLM_PASSWORD }}
+  publish:
+    needs: vouch
+    steps:
+      - uses: defenseunicorns-udm/udm-common/.github/actions/publish@v0.6.0
+        with:
+          artifact-name: zarf-package   # downloaded artifact
+
+# After (v0.7.0) — single job, package stays in workspace
+jobs:
+  scan-vouch-publish:
+    steps:
+      - uses: defenseunicorns-udm/udm-common/.github/actions/vouch@v0.7.0
+        with:
+          olm-cat: cat-api.example.com  # renamed from olm-catalog
+          olm-org: your-org
+          # olm-user-id / olm-password no longer needed
+      - uses: defenseunicorns-udm/udm-common/.github/actions/publish@v0.7.0
+        # no artifact-name needed
+```
+
+See [`examples/ci-example.yaml`](examples/ci-example.yaml) for the full updated pipeline pattern.
+
 ## [0.6.0](https://github.com/defenseunicorns-udm/udm-common/compare/v0.5.1...v0.6.0) (2026-04-23)
 
 
