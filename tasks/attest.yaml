@@ -51,6 +51,9 @@ tasks:
               --signer-fulcio-oidc-issuer="${{ .inputs.fulcio_oidc_issuer }}"
               --timestamp-servers=https://timestamp.sigstore.dev/api/v1/timestamp
             )
+            if [ -n "${SIGSTORE_ID_TOKEN:-}" ]; then
+              WITNESS_ARGS+=(--signer-fulcio-token "$SIGSTORE_ID_TOKEN")
+            fi
           fi
           if [ -n "$WITNESS_WORKINGDIR" ]; then
             WITNESS_ARGS+=(--workingdir "$WITNESS_WORKINGDIR")
