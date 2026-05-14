@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.0](https://github.com/defenseunicorns-udm/udm-common/compare/v0.8.0...v0.9.0) (2026-05-14)
+
+
+### Features
+
+* **attest:** move lint attestation to tasks/attest.yaml ([#68](https://github.com/defenseunicorns-udm/udm-common/issues/68)) ([4684a97](https://github.com/defenseunicorns-udm/udm-common/commit/4684a97b624f36641b9c719a4fb6c23f7dc34f94))
+
 ## [0.8.0](https://github.com/defenseunicorns-udm/udm-common/compare/v0.7.1...v0.8.0) (2026-05-14)
 
 
