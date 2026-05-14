@@ -15,6 +15,20 @@ tasks:
           linux: bash
           darwin: bash
         cmd: |
+          get_os() {
+            case "$(uname -s)" in
+              Linux)  echo "linux" ;;
+              Darwin) echo "darwin" ;;
+              *) echo "Unsupported OS: $(uname -s)" >&2; return 1 ;;
+            esac
+          }
+          get_arch() {
+            case "$(uname -m)" in
+              x86_64)        echo "amd64" ;;
+              aarch64|arm64) echo "arm64" ;;
+              *) echo "Unsupported architecture: $(uname -m)" >&2; return 1 ;;
+            esac
+          }
           VERSION=${{ .inputs.version }}
           INSTALL_DIR="$HOME/.local/bin"
           TARGET="$INSTALL_DIR/uds"
@@ -24,8 +38,6 @@ tasks:
             exit 0
           fi
 
-          # shellcheck source=scripts/install.sh
-          source scripts/install.sh
           OS_CAP="$(get_os | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')"
           ARCH="$(get_arch)"
 
@@ -54,13 +66,32 @@ tasks:
           linux: bash
           darwin: bash
         cmd: |
+          get_os() {
+            case "$(uname -s)" in
+              Linux)  echo "linux" ;;
+              Darwin) echo "darwin" ;;
+              *) echo "Unsupported OS: $(uname -s)" >&2; return 1 ;;
+            esac
+          }
+          get_arch() {
+            case "$(uname -m)" in
+              x86_64)        echo "amd64" ;;
+              aarch64|arm64) echo "arm64" ;;
+              *) echo "Unsupported architecture: $(uname -m)" >&2; return 1 ;;
+            esac
+          }
+          install_binary() {
+            local name="$1" url="$2"
+            mkdir -p "$HOME/.local/bin"
+            curl -fSL "$url" -o "$HOME/.local/bin/$name"
+            chmod +x "$HOME/.local/bin/$name"
+            echo "$name installed to $HOME/.local/bin/$name"
+          }
           if command -v cosign > /dev/null 2>&1; then
             echo "cosign already installed: $(cosign version 2>/dev/null | head -1 || true)"
             exit 0
           fi
           VERSION=${{ .inputs.version }}
-          # shellcheck source=scripts/install.sh
-          source scripts/install.sh
           OS="$(get_os)"
           ARCH="$(get_arch)"
           install_binary cosign \
@@ -155,12 +186,10 @@ tasks:
           echo "Downloading witness ${VERSION} (${PLATFORM}/${ARCH_NAME})"
           curl -fSL "${RELEASE_BASE}/${ARTIFACT}" -o "${TEMP_DIR}/${ARTIFACT}"
 
-          curl -fSL "${RELEASE_BASE}/${ARTIFACT}.pem" -o "${TEMP_DIR}/${ARTIFACT}.pem"
-          curl -fSL "${RELEASE_BASE}/${ARTIFACT}.sig" -o "${TEMP_DIR}/${ARTIFACT}.sig"
+          curl -fSL "${RELEASE_BASE}/${ARTIFACT}.sigstore.json" -o "${TEMP_DIR}/${ARTIFACT}.sigstore.json"
           CERT_IDENTITY="https://github.com/in-toto/witness/.github/workflows/release.yml@refs/tags/v${VERSION}"
           cosign verify-blob \
-            --certificate       "${TEMP_DIR}/${ARTIFACT}.pem" \
-            --signature         "${TEMP_DIR}/${ARTIFACT}.sig" \
+            --bundle            "${TEMP_DIR}/${ARTIFACT}.sigstore.json" \
             --certificate-identity "$CERT_IDENTITY" \
             --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
             "${TEMP_DIR}/${ARTIFACT}"
