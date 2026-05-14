@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.0](https://github.com/defenseunicorns-udm/udm-common/compare/v0.7.1...v0.8.0) (2026-05-14)
+
+
+### Features
+
+* add lint:attested task for witness-wrapped linting ([#65](https://github.com/defenseunicorns-udm/udm-common/issues/65)) ([f4b728f](https://github.com/defenseunicorns-udm/udm-common/commit/f4b728f31fbc5da12bc120559cefc5daa475d4df))
+
 ## [0.7.1](https://github.com/defenseunicorns-udm/udm-common/compare/v0.7.0...v0.7.1) (2026-05-11)
 
 
