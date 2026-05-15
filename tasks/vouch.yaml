@@ -161,7 +161,8 @@ tasks:
           else
             echo "No Witness attestations were produced or provided; running OLM vouch without --attestations."
           fi
-
+          echo "====vouch.yaml===="
+          echo "./olm vouch \"$PACKAGE\" \"${OLM_ARGS[@]}\" --log-level debug"
           ./olm vouch "$PACKAGE" \
             "${OLM_ARGS[@]}" \
             --log-level debug
