@@ -100,8 +100,6 @@ tasks:
           if [ "$SHOULD_WITNESS" = "true" ]; then
             uds run setup:witness
             WITNESS_ARGS+=(--enable-archivista="$ENABLE_ARCHIVISTA")
-            echo "===build.yaml===="
-            echo "witness run \"${WITNESS_ARGS[@]}\" -s=zarf-create --outfile=\"$ZARF_CREATE_WITNESS\" -- \"${ZARF_CMD[@]}\""
             witness run "${WITNESS_ARGS[@]}" -s=zarf-create --outfile="$ZARF_CREATE_WITNESS" -- "${ZARF_CMD[@]}"
           else
             echo "No signing key or Sigstore enabled. Building Zarf package without Witness attestation."

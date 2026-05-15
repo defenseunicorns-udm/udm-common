@@ -33,7 +33,6 @@ tasks:
           REGISTRY_ORG="${{ .inputs.registry_org }}"
           REGISTRY_USER_ID="${{ .inputs.registry_user_id }}"
           REGISTRY_PASSWORD="${{ .inputs.registry_password }}"
-          echo "====publish.yaml===="
           if [ "${{ .inputs.dry_run }}" = "true" ]; then
             echo "Dry run: skipping Zarf package publish."
             exit 0

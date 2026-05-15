@@ -83,8 +83,7 @@ tasks:
           if [ -n "$ZARF_FLAVOR" ]; then
             BUILD_ARGS+=(--with zarf_flavor="$ZARF_FLAVOR")
           fi
-          echo "====vouch.yaml====="
-          echo "uds run build:zarf-package \"${BUILD_ARGS[@]}\""
+
           uds run build:zarf-package "${BUILD_ARGS[@]}"
 
           PACKAGE=$(find . -maxdepth 1 -name "zarf-package-*.tar.zst" -type f | head -n 1)
@@ -96,8 +95,7 @@ tasks:
             echo "No OLM_CAT configured. Skipping OLM vouch for local run."
             exit 0
           fi
-          echo "=====vouch.yaml====="
-          echo "running uds run olm:setup"
+
           uds run olm:setup \
             --with github_token="${{ .inputs.github_token }}"
 
@@ -164,8 +162,7 @@ tasks:
           else
             echo "No Witness attestations were produced or provided; running OLM vouch without --attestations."
           fi
-          echo "====vouch.yaml===="
-          echo "./olm vouch \"$PACKAGE\" \"${OLM_ARGS[@]}\" --log-level debug"
+
           ./olm vouch "$PACKAGE" \
             "${OLM_ARGS[@]}" \
             --log-level debug
