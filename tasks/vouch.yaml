@@ -51,6 +51,9 @@ tasks:
       build_command:
         description: Optional. Custom build command to run under Witness attestation instead of the default 'uds zarf package create'. When set, zarf_path and architecture inputs are ignored.
         default: ""
+      olm_identity_token:
+        description: OIDC identity token for OLM CAT authentication. In GitLab CI, set via id_tokens with aud=cat and pass $OLM_ID_TOKEN. Leave empty for interactive device flow (local use).
+        default: ""
     actions:
       - description: Install tools, build Zarf package, and vouch
         shell:
@@ -133,9 +136,14 @@ tasks:
             done
           fi
 
+          OLM_IDENTITY_TOKEN="${{ .inputs.olm_identity_token }}"
+
           OLM_ARGS=()
           if [ -n "$OLM_CAT" ]; then
             OLM_ARGS+=(--cat "$OLM_CAT")
+          fi
+          if [ -n "$OLM_IDENTITY_TOKEN" ]; then
+            OLM_ARGS+=(--identity-token "$OLM_IDENTITY_TOKEN")
           fi
           if [ -n "$OLM_ORG" ]; then
             OLM_ARGS+=(--org "$OLM_ORG")
