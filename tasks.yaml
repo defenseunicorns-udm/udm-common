@@ -22,25 +22,6 @@ tasks:
       - task: shell
       - task: tasks
 
-  - name: lint-attested
-    description: Run lint task with Witness attestation, producing lint-witness.json
-    inputs:
-      witness_key_path:
-        description: Path to a local signing key for Witness. Leave empty in CI (Sigstore is used instead).
-        default: ""
-      witness_workingdir:
-        description: Directory for Witness to run the attested command from.
-        default: ""
-      enable_sigstore:
-        description: Sign attestations with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions).
-        default: "true"
-    actions:
-      - task: attest:lint
-        with:
-          witness_key_path: ${{ .inputs.witness_key_path }}
-          witness_workingdir: ${{ .inputs.witness_workingdir }}
-          enable_sigstore: ${{ .inputs.enable_sigstore }}
-
   - name: yaml
     description: Run YAML linting checks
     actions:
