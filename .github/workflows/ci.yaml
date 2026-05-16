@@ -27,7 +27,6 @@ jobs:
         run: uds run test
 
   scan-vouch-publish:
-    needs: lint
     runs-on: ubuntu-latest
     permissions:
       contents: read
