@@ -54,7 +54,7 @@ jobs:
       - name: Vouch Package and Publish
         env:
           OLM_REGISTRY: registry.uds-mil.us
-          OLM_REGISTRY_USER: ${{ secrets.REGISTRY_USER_ID }}
+          OLM_REGISTRY_USERNAME: ${{ secrets.REGISTRY_USER_ID }}
           OLM_REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
         run: |
           uds run vouch:package \
