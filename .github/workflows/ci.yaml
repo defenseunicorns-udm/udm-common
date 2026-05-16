@@ -52,10 +52,6 @@ jobs:
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
       - name: Vouch Package and Publish
-        env:
-          OLM_REGISTRY: registry.uds-mil.us
-          OLM_REGISTRY_USERNAME: ${{ secrets.REGISTRY_USER_ID }}
-          OLM_REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
         run: |
           uds run vouch:package \
             --with github_token="${{ secrets.GITHUB_TOKEN }}" \
@@ -63,10 +59,10 @@ jobs:
             --with olm_org="${{ secrets.OLM_ORG }}" \
             --with attestations="gitleaks-witness.json,opengrep-witness.json,lint-witness.json" \
             --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json"
-      # - name: Publish
-      #   run: |
-      #     uds run publish:zarf-package \
-      #       --with registry="registry.uds-mil.us" \
-      #       --with registry_org="${{ secrets.REGISTRY_ORG }}" \
-      #       --with registry_user_id="${{ secrets.REGISTRY_USER_ID }}" \
-      #       --with registry_password="${{ secrets.REGISTRY_PASSWORD }}"
+      - name: Publish
+        run: |
+          uds run publish:zarf-package \
+            --with registry="registry.uds-mil.us" \
+            --with registry_org="${{ secrets.REGISTRY_ORG }}" \
+            --with registry_user_id="${{ secrets.REGISTRY_USER_ID }}" \
+            --with registry_password="${{ secrets.REGISTRY_PASSWORD }}"
