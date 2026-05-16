@@ -42,7 +42,7 @@ jobs:
 
       - name: Witness Run Lint
         run: uds run attest:lint
-        
+
       - name: Security Scan
         run: |
           uds run scan:security \
@@ -53,7 +53,7 @@ jobs:
 
       - name: Vouch Package and Publish
         env:
-          OLM_REGISTRY: "registry.uds-mil.us"
+          OLM_REGISTRY: registry.uds-mil.us
           OLM_REGISTRY_USER: ${{ secrets.REGISTRY_USER_ID }}
           OLM_REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
         run: |
