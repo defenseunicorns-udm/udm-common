@@ -6,12 +6,15 @@
 #
 # Include attest and setup from udm-common so `uds run attest:lint` is available:
 #
+
 includes:
-  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.9.1/tasks/setup.yaml
-  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.9.1/tasks/attest.yaml
-  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.9.1/tasks/scan.yaml
-  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.9.1/tasks/vouch.yaml
-  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.9.1/tasks/publish.yaml
+  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/feat/configurable-fulcio-oidc-issuer/tasks/setup.yaml
+  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/feat/configurable-fulcio-oidc-issuer/tasks/attest.yaml
+  - build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/feat/configurable-fulcio-oidc-issuer/tasks/build.yaml
+  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/feat/configurable-fulcio-oidc-issuer/tasks/scan.yaml
+  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/feat/configurable-fulcio-oidc-issuer/tasks/vouch.yaml
+  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/feat/configurable-fulcio-oidc-issuer/tasks/publish.yaml
+  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/feat/configurable-fulcio-oidc-issuer/tasks/olm.yaml
 
 # Copy the relevant section below into your repo's tasks.yaml and adapt as needed.
 
