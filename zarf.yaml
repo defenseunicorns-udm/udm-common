@@ -6,7 +6,9 @@ kind: ZarfPackageConfig
 metadata:
   name: nginx
   description: UDS nginx package
-  version: dev
+  version: 0.1.0
+  authors:
+    - name: Defense Unicorns
 
 
 variables:
