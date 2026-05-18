@@ -242,11 +242,12 @@ Include all task namespaces in your repo's `tasks.yaml`:
 
 ```yaml
 includes:
-  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/setup.yaml
-  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/attest.yaml
-  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/scan.yaml
-  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/vouch.yaml
-  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/publish.yaml
+  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/setup.yaml
+  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/attest.yaml
+  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/scan.yaml
+  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/vouch.yaml
+  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/publish.yaml
+  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/olm.yaml
 ```
 
 ## Examples

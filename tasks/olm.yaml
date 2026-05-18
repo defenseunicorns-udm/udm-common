@@ -1,7 +1,5 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/defenseunicorns/maru-runner/refs/heads/main/tasks.schema.json
-
 tasks:
-
   - name: setup
     description: Authenticate with GHCR and install the OLM CLI
     inputs:
@@ -21,13 +19,20 @@ tasks:
           set -euo pipefail
           export PATH="$HOME/.local/bin:$PATH"
 
+          # Detect OS
+          OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+          case "$OS" in
+            linux)  OCI_OS="linux" ;;
+            darwin) OCI_OS="darwin" ;;
+            *) echo "Unsupported OS: $OS" && exit 1 ;;
+          esac
+
           GITHUB_TOKEN_VAL=${{ .inputs.github_token }}
           if [ -n "$GITHUB_TOKEN_VAL" ]; then
             uds zarf tools registry login -u token -p "$GITHUB_TOKEN_VAL" ghcr.io
           fi
 
           uds zarf package deploy \
-            "oci://ghcr.io/defenseunicorns-udm/olm-installer:${{ .inputs.version }}-linux" \
-            -a amd64 --confirm
+            "oci://ghcr.io/defenseunicorns-udm/olm-installer:${{ .inputs.version }}-${OCI_OS}" --confirm
 
           chmod +x olm
