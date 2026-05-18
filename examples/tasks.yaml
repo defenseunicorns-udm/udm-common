@@ -8,13 +8,13 @@
 #
 
 includes:
-  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/feat/configurable-fulcio-oidc-issuer/tasks/setup.yaml
-  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/feat/configurable-fulcio-oidc-issuer/tasks/attest.yaml
-  - build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/feat/configurable-fulcio-oidc-issuer/tasks/build.yaml
-  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/feat/configurable-fulcio-oidc-issuer/tasks/scan.yaml
-  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/feat/configurable-fulcio-oidc-issuer/tasks/vouch.yaml
-  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/feat/configurable-fulcio-oidc-issuer/tasks/publish.yaml
-  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/feat/configurable-fulcio-oidc-issuer/tasks/olm.yaml
+  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/setup.yaml
+  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/attest.yaml
+  - build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/build.yaml
+  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/scan.yaml
+  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/vouch.yaml
+  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/publish.yaml
+  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/olm.yaml
 
 # Copy the relevant section below into your repo's tasks.yaml and adapt as needed.
 
