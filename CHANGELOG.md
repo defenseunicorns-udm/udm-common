@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.0](https://github.com/defenseunicorns-udm/udm-common/compare/v0.9.1...v0.10.0) (2026-05-18)
+
+
+### Features
+
+* add GitLab CI support for UDM pipeline attestations ([#74](https://github.com/defenseunicorns-udm/udm-common/issues/74)) ([381e2e0](https://github.com/defenseunicorns-udm/udm-common/commit/381e2e09b5c0290e42344e6286a03599f46d1188))
+
 ## [0.9.1](https://github.com/defenseunicorns-udm/udm-common/compare/v0.9.0...v0.9.1) (2026-05-14)
 
 
