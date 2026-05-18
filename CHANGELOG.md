@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.1](https://github.com/defenseunicorns-udm/udm-common/compare/v0.10.0...v0.10.1) (2026-05-18)
+
+
+### Bug Fixes
+
+* update olm setup to run on macos ([#78](https://github.com/defenseunicorns-udm/udm-common/issues/78)) ([4953737](https://github.com/defenseunicorns-udm/udm-common/commit/495373728b9b8069145fa4aba5f72341f3de616f))
+
 ## [0.10.0](https://github.com/defenseunicorns-udm/udm-common/compare/v0.9.1...v0.10.0) (2026-05-18)
 
 
