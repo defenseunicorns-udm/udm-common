@@ -204,7 +204,7 @@ scan:
   script:
     - uds run scan:security \
         --with enable_sigstore=true \
-        --with fulcio_oidc_issuer="https://gitlab.com"
+        --with fulcio_oidc_issuer=""$CI_SERVER_URL""
 ```
 
 ```yaml
@@ -212,7 +212,7 @@ scan:
 - task: vouch:package
   with:
     enable_sigstore: "true"
-    fulcio_oidc_issuer: https://gitlab.com
+    fulcio_oidc_issuer: "$CI_SERVER_URL"
     olm_identity_token: "$OLM_ID_TOKEN"
     olm_cat: cat-api.uds-mil.us
     olm_org: <your-org-name>
@@ -220,7 +220,7 @@ scan:
     sarif_files: gitleaks.sarif.json,opengrep.sarif.json
 ```
 
-For a self-hosted GitLab instance, replace `https://gitlab.com` with your instance URL.
+`$CI_SERVER_URL` is a built-in GitLab variable that resolves to the GitLab instance URL, which is the OIDC issuer for GitLab's Sigstore integration. `OLM_ID_TOKEN` is a variable you define in GitLab that requests an OIDC token for your OLM registry — pass it to `vouch:package` as `olm_identity_token`.
 
 See [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) for a complete annotated pipeline.
 
