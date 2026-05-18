@@ -136,6 +136,7 @@ uds run attest:lint \
 
 - Build a Zarf package locally:
 
+# Replace `<ARCH>` with `amd64` or `arm64` 
 ```bash
 uds run build:zarf-package \
   --with zarf_path=. \
