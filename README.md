@@ -139,7 +139,7 @@ uds run attest:lint \
 ```bash
 uds run build:zarf-package \
   --with zarf_path=. \
-  --with architecture=amd64
+  --with architecture=<ARCH>
 ```
 
 - Build a flavored Zarf package locally:
@@ -147,7 +147,7 @@ uds run build:zarf-package \
 ```bash
 uds run build:zarf-package \
   --with zarf_path=. \
-  --with architecture=amd64 \
+  --with architecture=<ARCH> \
   --with zarf_flavor=upstream
 ```
 
@@ -169,7 +169,7 @@ uds run vouch:package \
   --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json" \
   --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
   --with github_token="$GITHUB_TOKEN" \
-  --with architecture=arm64
+  --with architecture=<ARCH>
 ```
 
 - Build and vouch with a custom build command:
@@ -185,7 +185,7 @@ uds run vouch:package \
   --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json" \
   --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
   --with github_token="$GITHUB_TOKEN" \
-  --with architecture=arm64
+  --with architecture=<ARCH>
 ```
 
 - Test publish without pushing to a registry:
