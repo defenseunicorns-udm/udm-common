@@ -24,9 +24,12 @@ Include task namespaces from this repo in your `tasks.yaml`:
 includes:
   - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/setup.yaml
   - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/attest.yaml
+  - build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/build.yaml
   - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/scan.yaml
   - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/vouch.yaml
   - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/publish.yaml
+  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/olm.yaml
+
 ```
 
 See [`examples/tasks.yaml`](examples/tasks.yaml) for a full starting point.
@@ -127,13 +130,17 @@ uds run lint
 - Run lint with Witness attestation (requires a local signing key or Sigstore OIDC):
 
 ```bash
-uds run attest:lint --with enable_sigstore=false --with witness_key_path=/path/to/key
+uds run attest:lint \
+  --with witness_key_path=/path/to/key
 ```
 
 - Build a Zarf package locally:
 
+# Replace `<ARCH>` with `amd64` or `arm64` 
 ```bash
-uds run build:zarf-package --with zarf_path=. --with architecture=amd64
+uds run build:zarf-package \
+  --with zarf_path=. \
+  --with architecture=<ARCH>
 ```
 
 - Build a flavored Zarf package locally:
@@ -141,7 +148,7 @@ uds run build:zarf-package --with zarf_path=. --with architecture=amd64
 ```bash
 uds run build:zarf-package \
   --with zarf_path=. \
-  --with architecture=amd64 \
+  --with architecture=<ARCH> \
   --with zarf_flavor=upstream
 ```
 
@@ -156,9 +163,14 @@ uds run build:zarf-package --with build_command="./scripts/my-build.sh"
 ```bash
 uds run vouch:package \
   --with zarf_path=. \
-  --with olm_cat=cat-api.uds-mil.us \
-  --with olm_org="<your-org-name>" \
-  --with github_token="$GITHUB_TOKEN"
+  --with witness_key_path="$(pwd)/witness-key.pem" \
+  --with enable_sigstore=true \
+  --with olm_cat="cat-api.uds-mil.us" \
+  --with olm_org="<your-org>" \
+  --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json" \
+  --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
+  --with github_token="$GITHUB_TOKEN" \
+  --with architecture=<ARCH>
 ```
 
 - Build and vouch with a custom build command:
@@ -166,9 +178,15 @@ uds run vouch:package \
 ```bash
 uds run vouch:package \
   --with build_command="./scripts/my-build.sh" \
-  --with olm_cat=cat-api.uds-mil.us \
-  --with olm_org="<your-org-name>" \
-  --with github_token="$GITHUB_TOKEN"
+  --with zarf_path=. \
+  --with witness_key_path="$(pwd)/witness-key.pem" \
+  --with enable_sigstore=true \
+  --with olm_cat="cat-api.uds-mil.us" \
+  --with olm_org="<your-org>" \
+  --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json" \
+  --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
+  --with github_token="$GITHUB_TOKEN" \
+  --with architecture=<ARCH>
 ```
 
 - Test publish without pushing to a registry:
@@ -242,11 +260,12 @@ Include all task namespaces in your repo's `tasks.yaml`:
 
 ```yaml
 includes:
-  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/setup.yaml
-  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/attest.yaml
-  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/scan.yaml
-  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/vouch.yaml
-  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.0/tasks/publish.yaml
+  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/setup.yaml
+  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/attest.yaml
+  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/scan.yaml
+  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/vouch.yaml
+  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/publish.yaml
+  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/olm.yaml
 ```
 
 ## Examples
