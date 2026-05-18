@@ -30,8 +30,12 @@ jobs:
         run: uds run attest:lint
 
       - name: Security Scan
-        run: uds run scan:security
+        run: uds run scan:security \
+          --with opengrep_scan_path=/path/to/source_code # Adjust this as needed for your project
 
+      # --with build_command is optional. Use it if your build process is more complex than 'zarf package create' and requires additional setup steps.
+      # The command will run under Witness attestation, and you can use the same environment variables as in the zarf-package task (e.g. $ZARF_PATH, $ARCHITECTURE) to customize it.
+      # It is expected that this command will produce a zarf package. If you use this, the zarf_path and architecture inputs will be ignored since those should be handled in your custom command.
       - name: Vouch
         run: |
           uds run vouch:package \

@@ -184,6 +184,46 @@ Notes:
 - For local runs without Sigstore/OIDC, pass `--with enable_sigstore=false`. Add `--with witness_key_path=/path/to/key` when you still want local Witness signing.
 - `enable_archivista` is available on task-based builds and pipelines and is forwarded to the build attestation step.
 
+## CI Provider Configuration
+
+By default, Sigstore signing uses `https://token.actions.githubusercontent.com` as the Fulcio OIDC issuer, which is correct for GitHub Actions. To use Sigstore attestation from another CI provider, pass `fulcio_oidc_issuer` with the provider's OIDC issuer URL.
+
+Supported by: `attest:lint`, `scan:security`, `scan:gitleaks`, `scan:opengrep`, `build:zarf-package`, `vouch:package`.
+
+### Configuring Sigstore for GitLab CI
+
+The snippets below show only the Sigstore-relevant configuration — they are not a complete GitLab CI pipeline. GitLab requires OIDC tokens to be explicitly requested via `id_tokens`; without this, `enable_sigstore=true` will fail.
+
+```yaml
+# .gitlab-ci.yml — Sigstore OIDC token request (add to any job that signs with Witness)
+id_tokens:
+  SIGSTORE_ID_TOKEN:
+    aud: sigstore
+
+scan:
+  script:
+    - uds run scan:security \
+        --with enable_sigstore=true \
+        --with fulcio_oidc_issuer=""$CI_SERVER_URL""
+```
+
+```yaml
+# tasks.yaml — pass fulcio_oidc_issuer through to vouch
+- task: vouch:package
+  with:
+    enable_sigstore: "true"
+    fulcio_oidc_issuer: "$CI_SERVER_URL"
+    olm_identity_token: "$OLM_ID_TOKEN"
+    olm_cat: cat-api.uds-mil.us
+    olm_org: <your-org-name>
+    attestations: lint-witness.json,gitleaks-witness.json,opengrep-witness.json
+    sarif_files: gitleaks.sarif.json,opengrep.sarif.json
+```
+
+`$CI_SERVER_URL` is a built-in GitLab variable that resolves to the GitLab instance URL, which is the OIDC issuer for GitLab's Sigstore integration. `OLM_ID_TOKEN` is a variable you define in GitLab that requests an OIDC token for your OLM registry — pass it to `vouch:package` as `olm_identity_token`.
+
+See [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) for a complete annotated pipeline.
+
 ## Required Secrets
 
 | Secret | Used By | Description |
@@ -211,4 +251,10 @@ includes:
 
 ## Examples
 
-See the [`examples/`](examples/) directory for copy-paste starting points.
+See the [`examples/`](examples/) directory for copy-paste starting points:
+
+| File | Purpose |
+|------|---------|
+| [`examples/ci-example.yaml`](examples/ci-example.yaml) | Full annotated GitHub Actions workflow |
+| [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) | Full annotated GitLab CI pipeline |
+| [`examples/tasks.yaml`](examples/tasks.yaml) | Starter `tasks.yaml` with common lint patterns |
