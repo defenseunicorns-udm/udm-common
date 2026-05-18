@@ -213,11 +213,16 @@ scan:
   with:
     enable_sigstore: "true"
     fulcio_oidc_issuer: https://gitlab.com
+    olm_identity_token: "$OLM_ID_TOKEN"
     olm_cat: cat-api.uds-mil.us
     olm_org: <your-org-name>
+    attestations: lint-witness.json,gitleaks-witness.json,opengrep-witness.json
+    sarif_files: gitleaks.sarif.json,opengrep.sarif.json
 ```
 
 For a self-hosted GitLab instance, replace `https://gitlab.com` with your instance URL.
+
+See [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) for a complete annotated pipeline.
 
 ## Required Secrets
 
@@ -246,4 +251,10 @@ includes:
 
 ## Examples
 
-See the [`examples/`](examples/) directory for copy-paste starting points.
+See the [`examples/`](examples/) directory for copy-paste starting points:
+
+| File | Purpose |
+|------|---------|
+| [`examples/ci-example.yaml`](examples/ci-example.yaml) | Full annotated GitHub Actions workflow |
+| [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) | Full annotated GitLab CI pipeline |
+| [`examples/tasks.yaml`](examples/tasks.yaml) | Starter `tasks.yaml` with common lint patterns |

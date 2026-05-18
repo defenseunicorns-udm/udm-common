@@ -80,3 +80,5 @@ tasks:
   #         build_command: ./scripts/my-build.sh
   #         olm_cat: cat-api.uds-mil.us
   #         olm_org: <your-org-name>
+  #         attestations: lint-witness.json,gitleaks-witness.json,opengrep-witness.json
+  #         sarif_files: gitleaks.sarif.json,opengrep.sarif.json
