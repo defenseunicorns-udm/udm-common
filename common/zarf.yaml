@@ -3,6 +3,7 @@ kind: ZarfPackageConfig
 metadata:
   name: nginx
   description: UDS Common Nginx Example
+  version: 0.10.1
 
 components:
   - name: nginx

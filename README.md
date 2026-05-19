@@ -12,7 +12,7 @@ the UDS Army registry.
 | `attest` | `lint` | Wraps your `lint` task with Witness attestation |
 | `scan` | `security`, `gitleaks`, `opengrep` | Runs Gitleaks secrets scanning and OpenGrep SAST |
 | `build` | `zarf-package` | Builds a Zarf package under Witness attestation |
-| `vouch` | `package` | Builds, attests, and vouches via OLM |
+| `vouch` | `package` | Builds, attests, and vouches via OLM.  Pushes attestations to CAT |
 | `publish` | `zarf-package` | Publishes a vouched Zarf package to the UDS registry |
 | `olm` | `setup` | OLM CLI setup |
 
@@ -260,12 +260,12 @@ Include all task namespaces in your repo's `tasks.yaml`:
 
 ```yaml
 includes:
-  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/setup.yaml
-  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/attest.yaml
-  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/scan.yaml
-  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/vouch.yaml
-  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/publish.yaml
-  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/olm.yaml
+  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.1/tasks/setup.yaml
+  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.1/tasks/attest.yaml
+  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.1/tasks/scan.yaml
+  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.1/tasks/vouch.yaml
+  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.1/tasks/publish.yaml
+  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.1/tasks/olm.yaml
 ```
 
 ## Examples

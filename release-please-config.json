@@ -2,7 +2,19 @@
   "packages": {
     ".": {
       "release-type": "simple",
-      "changelog-path": "CHANGELOG.md"
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        {
+          "type": "yaml",
+          "path": "zarf.yaml",
+          "jsonpath": "$.metadata.version"
+        },
+        {
+          "type": "yaml",
+          "path": "common/zarf.yaml",
+          "jsonpath": "$.metadata.version"
+        }
+      ]
     }
   },
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
