@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.3](https://github.com/defenseunicorns-udm/udm-common/compare/v0.10.2...v0.10.3) (2026-05-19)
+
+
+### Bug Fixes
+
+* scope gitleaks scans to tracked package changes ([#86](https://github.com/defenseunicorns-udm/udm-common/issues/86)) ([5d73183](https://github.com/defenseunicorns-udm/udm-common/commit/5d7318363cd4159fe21884d7570679ef2dddf683))
+
 ## [0.10.2](https://github.com/defenseunicorns-udm/udm-common/compare/v0.10.1...v0.10.2) (2026-05-19)
 
 
