@@ -41,10 +41,6 @@ runs:
         # udm-common checkout (temp dir on external runners, workspace on internal).
         UDM_ROOT="$(realpath "${{ github.action_path }}/../../..")"
 
-        # Copy gitleaks config into the udm-common root so gitleaks finds it
-        # in CWD when the tasks run from there.
-        cp "${{ github.action_path }}/.gitleaks.toml" "$UDM_ROOT/.gitleaks.toml"
-
         (cd "$UDM_ROOT" && uds run scan:security \
           --with run_opengrep="${{ inputs.run-opengrep }}" \
           --with gitleaks_scan_path="$GITHUB_WORKSPACE" \

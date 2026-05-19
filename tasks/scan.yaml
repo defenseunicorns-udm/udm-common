@@ -136,7 +136,33 @@ tasks:
           uds run scan:install-gitleaks --with version="${{ .inputs.gitleaks_version }}"
 
           # Base Gitleaks Command
-          GITLEAKS_CMD=(gitleaks dir "$GITLEAKS_SCAN_PATH" --report-format sarif --report-path "$GITLEAKS_SARIF")
+          # Resolve the default branch from local refs only. `git remote show`
+          # reaches out to the network and can make otherwise-local scans fail.
+          DEFAULT_BRANCH=""
+          if DEFAULT_REF="$(git -C "$GITLEAKS_SCAN_PATH" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)"; then
+            DEFAULT_BRANCH="${DEFAULT_REF#origin/}"
+          fi
+          # Some CI checkouts do not create origin/HEAD, so fall back to the
+          # common default branch names as long as the refs exist locally.
+          if [ -z "$DEFAULT_BRANCH" ]; then
+            for BRANCH in main master; do
+              if git -C "$GITLEAKS_SCAN_PATH" rev-parse --verify --quiet "origin/${BRANCH}" >/dev/null; then
+                DEFAULT_BRANCH="$BRANCH"
+                break
+              fi
+            done
+          fi
+          if [ -z "$DEFAULT_BRANCH" ] || ! git -C "$GITLEAKS_SCAN_PATH" rev-parse --verify --quiet "origin/${DEFAULT_BRANCH}" >/dev/null; then
+            echo "Unable to find a local origin default branch ref for Gitleaks scanning."
+            echo "Fetch origin/main or origin/master before running scan:gitleaks."
+            exit 1
+          fi
+
+          # Scan only tracked commits in the current package iteration. This
+          # avoids local-only files such as .env files and generated witness or
+          # SARIF artifacts while still respecting the requested scan path.
+          GITLEAKS_LOG_OPTS="origin/${DEFAULT_BRANCH}..HEAD -- ."
+          GITLEAKS_CMD=(gitleaks git "$GITLEAKS_SCAN_PATH" --log-opts="$GITLEAKS_LOG_OPTS" --verbose --report-format sarif --report-path "$GITLEAKS_SARIF")
           rm -f "$GITLEAKS_WITNESS"
 
           WITNESS_ARGS=(-a=environment -a=git)

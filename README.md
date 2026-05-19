@@ -78,6 +78,7 @@ jobs:
     steps:
       - run: |
           uds run scan:security \
+            --with gitleaks_scan_path="services/${{ matrix.service }}" \
             --with opengrep_scan_path="services/${{ matrix.service }}"
       - run: |
           uds run vouch:package \
@@ -93,6 +94,19 @@ jobs:
             --with registry_user_id="${{ secrets.REGISTRY_USER_ID }}" \
             --with registry_password="${{ secrets.REGISTRY_PASSWORD }}"
 ```
+
+### Security Scan Scope
+
+`scan:gitleaks` scans tracked Git commits in the current package iteration, not
+the live working directory. It compares `HEAD` to the local `origin/main` or
+`origin/master` default branch ref and scopes the scan to `gitleaks_scan_path`.
+This keeps local-only files such as `.env` files, generated SARIF reports, and
+Witness attestations out of the scan while still letting monorepos scan only the
+service that is being packaged.
+
+For monorepos, pass the same service path to `gitleaks_scan_path`,
+`opengrep_scan_path`, and `zarf_path` so the evidence matches the package being
+cut.
 
 ## Custom Build Commands
 
