@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.2](https://github.com/defenseunicorns-udm/udm-common/compare/v0.10.1...v0.10.2) (2026-05-19)
+
+
+### Bug Fixes
+
+* tighten renovate coverage for shared workflow refs ([#81](https://github.com/defenseunicorns-udm/udm-common/issues/81)) ([c1cd40a](https://github.com/defenseunicorns-udm/udm-common/commit/c1cd40ad6a01f81d747bb1c3d67ee73000339719))
+
 ## [0.10.1](https://github.com/defenseunicorns-udm/udm-common/compare/v0.10.0...v0.10.1) (2026-05-18)
 
 
