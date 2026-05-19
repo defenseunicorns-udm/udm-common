@@ -136,31 +136,56 @@ tasks:
           uds run scan:install-gitleaks --with version="${{ .inputs.gitleaks_version }}"
 
           # Base Gitleaks Command
-          # Resolve the default branch from local refs only. `git remote show`
-          # reaches out to the network and can make otherwise-local scans fail.
+          # Resolve the default branch. Prefer local refs to avoid network
+          # calls, but fall back to CI env vars + a shallow fetch for shallow
+          # CI checkouts (e.g. actions/checkout fetch-depth:1 on a PR).
           DEFAULT_BRANCH=""
           if DEFAULT_REF="$(git -C "$GITLEAKS_SCAN_PATH" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)"; then
             DEFAULT_BRANCH="${DEFAULT_REF#origin/}"
           fi
-          # Some CI checkouts do not create origin/HEAD, so fall back to the
-          # common default branch names as long as the refs exist locally.
+          # Some CI checkouts do not create origin/HEAD; check common names.
           if [ -z "$DEFAULT_BRANCH" ]; then
             for BRANCH in main master; do
-              if git -C "$GITLEAKS_SCAN_PATH" rev-parse --verify --quiet "origin/${BRANCH}" >/dev/null; then
+              if git -C "$GITLEAKS_SCAN_PATH" rev-parse --verify --quiet "origin/${BRANCH}" >/dev/null 2>&1; then
                 DEFAULT_BRANCH="$BRANCH"
                 break
               fi
             done
           fi
-          if [ -z "$DEFAULT_BRANCH" ] || ! git -C "$GITLEAKS_SCAN_PATH" rev-parse --verify --quiet "origin/${DEFAULT_BRANCH}" >/dev/null; then
-            echo "Unable to find a local origin default branch ref for Gitleaks scanning."
-            echo "Fetch origin/main or origin/master before running scan:gitleaks."
+          # Shallow PR checkouts (GitHub Actions fetch-depth:1, GitLab MR
+          # pipelines) may not fetch the target branch at all. Use CI env vars
+          # as a hint and do a single-depth fetch to make the ref available.
+          if [ -z "$DEFAULT_BRANCH" ]; then
+            for CANDIDATE in "${GITHUB_BASE_REF:-}" "${CI_DEFAULT_BRANCH:-}" "${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-}"; do
+              [ -n "$CANDIDATE" ] || continue
+              git -C "$GITLEAKS_SCAN_PATH" fetch --depth=1 origin "$CANDIDATE" 2>/dev/null || true
+              if git -C "$GITLEAKS_SCAN_PATH" rev-parse --verify --quiet "origin/${CANDIDATE}" >/dev/null 2>&1; then
+                DEFAULT_BRANCH="$CANDIDATE"
+                break
+              fi
+            done
+          fi
+          # Last resort: try fetching the two most common default branch names.
+          if [ -z "$DEFAULT_BRANCH" ]; then
+            for BRANCH in main master; do
+              git -C "$GITLEAKS_SCAN_PATH" fetch --depth=1 origin "$BRANCH" 2>/dev/null || true
+              if git -C "$GITLEAKS_SCAN_PATH" rev-parse --verify --quiet "origin/${BRANCH}" >/dev/null 2>&1; then
+                DEFAULT_BRANCH="$BRANCH"
+                break
+              fi
+            done
+          fi
+
+          # Fail fast if we still have no base ref — a full history scan would
+          # exceed the intended scope (only commits in this branch/package).
+          if [ -z "$DEFAULT_BRANCH" ]; then
+            echo "ERROR: could not resolve origin default branch for gitleaks scan."
+            echo "Set GITHUB_BASE_REF (GitHub Actions) or CI_DEFAULT_BRANCH (GitLab) and ensure"
+            echo "the runner can reach the remote, or pre-fetch origin/main before running this task."
             exit 1
           fi
 
-          # Scan only tracked commits in the current package iteration. This
-          # avoids local-only files such as .env files and generated witness or
-          # SARIF artifacts while still respecting the requested scan path.
+          # Scan only commits added in this branch since the default branch.
           GITLEAKS_LOG_OPTS="origin/${DEFAULT_BRANCH}..HEAD -- ."
           GITLEAKS_CMD=(gitleaks git "$GITLEAKS_SCAN_PATH" --log-opts="$GITLEAKS_LOG_OPTS" --verbose --report-format sarif --report-path "$GITLEAKS_SARIF")
           rm -f "$GITLEAKS_WITNESS"
