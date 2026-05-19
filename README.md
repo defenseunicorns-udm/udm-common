@@ -22,13 +22,13 @@ Include task namespaces from this repo in your `tasks.yaml`:
 
 ```yaml
 includes:
-  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/setup.yaml
-  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/attest.yaml
-  - build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/build.yaml
-  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/scan.yaml
-  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/vouch.yaml
-  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/publish.yaml
-  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/olm.yaml
+  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/setup.yaml
+  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/attest.yaml
+  - build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/build.yaml
+  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/scan.yaml
+  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/vouch.yaml
+  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/publish.yaml
+  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/olm.yaml
 
 ```
 
@@ -46,7 +46,7 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@fadca160263dfbe1f54b06604e58119a88f660e1 # v0.10.2
+      - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@9aaad66b21c7637b5be3d6aafdb21c9e7ff1df2a # v0.10.3
       - run: uds run attest:lint
       - run: uds run scan:security
       - run: |
@@ -274,12 +274,12 @@ Include all task namespaces in your repo's `tasks.yaml`:
 
 ```yaml
 includes:
-  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/setup.yaml
-  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/attest.yaml
-  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/scan.yaml
-  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/vouch.yaml
-  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/publish.yaml
-  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/olm.yaml
+  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/setup.yaml
+  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/attest.yaml
+  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/scan.yaml
+  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/vouch.yaml
+  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/publish.yaml
+  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/olm.yaml
 ```
 
 ## Examples

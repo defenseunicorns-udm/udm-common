@@ -7,13 +7,13 @@
 # Include attest and setup from udm-common so `uds run attest:lint` is available:
 #
 includes:
-  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/setup.yaml
-  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/attest.yaml
-  - build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/build.yaml
-  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/scan.yaml
-  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/vouch.yaml
-  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/publish.yaml
-  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.2/tasks/olm.yaml
+  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/setup.yaml
+  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/attest.yaml
+  - build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/build.yaml
+  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/scan.yaml
+  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/vouch.yaml
+  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/publish.yaml
+  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/olm.yaml
 
 # Copy the relevant section below into your repo's tasks.yaml and adapt as needed.
 
