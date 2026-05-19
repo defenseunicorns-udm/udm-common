@@ -1,10 +1,8 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/zarf-dev/zarf/main/zarf.schema.json
 kind: ZarfPackageConfig
 metadata:
   name: nginx
   description: UDS Common Nginx Example
-  version: 0.10.1
-
+  version: 0.10.2
 components:
   - name: nginx
     required: true
