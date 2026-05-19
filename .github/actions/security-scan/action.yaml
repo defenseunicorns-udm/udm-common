@@ -41,9 +41,10 @@ runs:
         # udm-common checkout (temp dir on external runners, workspace on internal).
         UDM_ROOT="$(realpath "${{ github.action_path }}/../../..")"
 
-        # Copy gitleaks config into the udm-common root so gitleaks finds it
-        # in CWD when the tasks run from there.
-        cp "${{ github.action_path }}/.gitleaks.toml" "$UDM_ROOT/.gitleaks.toml"
+        # Ensure the target branch ref exists for incremental gitleaks scanning.
+        # actions/checkout with fetch-depth:1 on a PR does not fetch origin/main.
+        GITLEAKS_BASE="${GITHUB_BASE_REF:-${GITHUB_REF_NAME:-main}}"
+        git -C "$GITHUB_WORKSPACE" fetch --depth=1 origin "$GITLEAKS_BASE" 2>/dev/null || true
 
         (cd "$UDM_ROOT" && uds run scan:security \
           --with run_opengrep="${{ inputs.run-opengrep }}" \
