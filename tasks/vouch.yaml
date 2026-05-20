@@ -54,6 +54,9 @@ tasks:
       olm_identity_token:
         description: OIDC identity token for OLM CAT authentication. In GitLab CI, set via id_tokens with aud=cat and pass $OLM_ID_TOKEN. Leave empty for interactive device flow (local use).
         default: ""
+      cosign_key_path:
+        description: Path to cosign private key file for signing container images and helm charts before attestation. Leave empty for keyless Sigstore signing.
+        default: ""
     actions:
       - description: Install tools, build Zarf package, and vouch
         shell:
@@ -98,6 +101,12 @@ tasks:
 
           uds run olm:setup \
             --with github_token="${{ .inputs.github_token }}"
+
+          uds run sign:artifacts \
+            --with zarf_package="$PACKAGE" \
+            --with registry_org="$OLM_ORG" \
+            --with cosign_key_path="${{ .inputs.cosign_key_path }}" \
+            --with enable_sigstore="${{ .inputs.enable_sigstore }}"
 
           ATTESTATION_FILES=()
           if [ -s zarf-create-witness.json ]; then
@@ -162,6 +171,8 @@ tasks:
           else
             echo "No Witness attestations were produced or provided; running OLM vouch without --attestations."
           fi
+          # cosign verify (inside OLM) must find signatures at the same repo used by sign:artifacts
+          export COSIGN_REPOSITORY="registry.uds-mil.us/${OLM_ORG}/signatures"
 
           ./olm vouch "$PACKAGE" \
             "${OLM_ARGS[@]}" \
