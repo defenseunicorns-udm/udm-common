@@ -23,9 +23,6 @@ tasks:
       cosign_key_path:
         description: Path to cosign private key file. Leave empty to use keyless Sigstore signing (requires OIDC token in CI).
         default: ""
-      enable_sigstore:
-        description: Use keyless Sigstore/Fulcio signing when no cosign key is provided. Requires OIDC token (e.g. GitHub Actions).
-        default: "true"
     actions:
       # - task: setup:cosign
       - description: Sign container images and OCI helm charts from the Zarf package
@@ -37,17 +34,11 @@ tasks:
           export PATH="$HOME/.local/bin:$PATH"
 
           COSIGN_KEY_PATH="${{ .inputs.cosign_key_path }}"
-          ENABLE_SIGSTORE="${{ .inputs.enable_sigstore }}"
           PACKAGE="${{ .inputs.zarf_package }}"
           REGISTRY="${{ .inputs.registry }}"
           REGISTRY_ORG="${{ .inputs.registry_org }}"
           REGISTRY_USER_ID="${{ .inputs.registry_user_id }}"
           REGISTRY_PASSWORD="${{ .inputs.registry_password }}"
-
-          if [ -z "$COSIGN_KEY_PATH" ] && [ "$ENABLE_SIGSTORE" != "true" ]; then
-            echo "No cosign key and Sigstore disabled; skipping artifact signing."
-            exit 0
-          fi
 
           if [ -n "$REGISTRY_USER_ID" ] && [ -n "$REGISTRY_PASSWORD" ]; then
             cosign login "$REGISTRY" -u "$REGISTRY_USER_ID" -p "$REGISTRY_PASSWORD"

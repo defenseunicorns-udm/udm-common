@@ -12,14 +12,11 @@ tasks:
         description: Target architecture for the Zarf package
         default: amd64
       witness_key_path:
-        description: Path to a local signing key for Witness. Use for local runs when enable_sigstore=false. Leave empty in CI (Sigstore is used instead).
+        description: Path to a local signing key for Witness. Leave empty to use Sigstore browser auth instead.
         default: ""
       witness_workingdir:
         description: Directory for Witness to run the attested command from. Use the caller repository workspace in composite actions so the git attestor sees a real checkout.
         default: ""
-      enable_sigstore:
-        description: Sign the attestation with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions).
-        default: "true"
       enable_archivista:
         description: Upload the attestation to Archivista.
         default: "false"
@@ -50,7 +47,6 @@ tasks:
           FLAVOR="${{ .inputs.zarf_flavor }}"
           WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
           WITNESS_WORKINGDIR="${{ .inputs.witness_workingdir }}"
-          ENABLE_SIGSTORE="${{ .inputs.enable_sigstore }}"
           ENABLE_ARCHIVISTA="${{ .inputs.enable_archivista }}"
           CUSTOM_CMD="${{ .inputs.build_command }}"
           OUTPUT_DIR="$(pwd)"
@@ -72,17 +68,14 @@ tasks:
           fi
           rm -f "$ZARF_CREATE_WITNESS"
 
-          SHOULD_WITNESS="false"
           WITNESS_ARGS=(-a=environment -a=git)
           if [ -n "$WITNESS_KEY_PATH" ]; then
-            SHOULD_WITNESS="true"
             if [ ! -f "$WITNESS_KEY_PATH" ]; then
               echo "Witness key file does not exist: $WITNESS_KEY_PATH"
               exit 1
             fi
             WITNESS_ARGS+=(--signer-file-key-path "$WITNESS_KEY_PATH")
-          elif [ "$ENABLE_SIGSTORE" = "true" ]; then
-            SHOULD_WITNESS="true"
+          else
             WITNESS_ARGS+=(
               --signer-fulcio-url=https://fulcio.sigstore.dev
               --signer-fulcio-oidc-client-id=sigstore
@@ -97,11 +90,6 @@ tasks:
             WITNESS_ARGS+=(--workingdir "$WITNESS_WORKINGDIR")
           fi
 
-          if [ "$SHOULD_WITNESS" = "true" ]; then
-            uds run setup:witness
-            WITNESS_ARGS+=(--enable-archivista="$ENABLE_ARCHIVISTA")
-            witness run "${WITNESS_ARGS[@]}" -s=zarf-create --outfile="$ZARF_CREATE_WITNESS" -- "${ZARF_CMD[@]}"
-          else
-            echo "No signing key or Sigstore enabled. Building Zarf package without Witness attestation."
-            "${ZARF_CMD[@]}"
-          fi
+          uds run setup:witness
+          WITNESS_ARGS+=(--enable-archivista="$ENABLE_ARCHIVISTA")
+          witness run "${WITNESS_ARGS[@]}" -s=zarf-create --outfile="$ZARF_CREATE_WITNESS" -- "${ZARF_CMD[@]}"

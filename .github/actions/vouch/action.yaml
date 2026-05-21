@@ -40,6 +40,26 @@ inputs:
     description: Optional. Custom build command to run under Witness attestation instead of the default 'uds zarf package create'. When set, zarf-path and zarf-architecture inputs are ignored.
     required: false
     default: ""
+  cosign-key-path:
+    description: Path to cosign private key file for artifact signing. Leave empty for keyless signing.
+    required: false
+    default: ""
+  sign-artifacts:
+    description: Sign package artifacts before OLM vouch. Set to false when artifacts are already signed elsewhere.
+    required: false
+    default: "true"
+  cosign-repository:
+    description: Optional cosign signature repository for OLM lookup. Defaults to registry.uds-mil.us/<olm-org>/signatures.
+    required: false
+    default: ""
+  registry-user-id:
+    description: Registry username for pushing cosign signatures.
+    required: false
+    default: ""
+  registry-password:
+    description: Registry password for pushing cosign signatures.
+    required: false
+    default: ""
 
 outputs:
   zarf-package:
@@ -81,6 +101,11 @@ runs:
           --with zarf_path="$ZARF_PATH"
           --with architecture="${{ inputs.zarf-architecture }}"
           --with build_command="${{ inputs.build-command }}"
+          --with cosign_key_path="${{ inputs.cosign-key-path }}"
+          --with sign_artifacts="${{ inputs.sign-artifacts }}"
+          --with cosign_repository="${{ inputs.cosign-repository }}"
+          --with registry_user_id="${{ inputs.registry-user-id }}"
+          --with registry_password="${{ inputs.registry-password }}"
         )
         if [[ -n "${{ inputs.zarf-flavor }}" ]]; then
           VOUCH_ARGS+=(--with zarf_flavor="${{ inputs.zarf-flavor }}")

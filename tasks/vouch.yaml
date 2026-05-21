@@ -3,7 +3,7 @@
 tasks:
 
   - name: package
-    description: Build a Zarf package with Witness attestation and vouch for it via OLM
+    description: Build and sign a Zarf package, or use an existing signed package, then vouch for it via OLM
     inputs:
       attestations:
         description: Comma-separated list of additional witness JSON attestation files to include
@@ -39,9 +39,6 @@ tasks:
       witness_workingdir:
         description: Directory for Witness to run the attested command from. Use the caller repository workspace in composite actions so the git attestor sees a real checkout.
         default: ""
-      enable_sigstore:
-        description: Sign the build attestation with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions).
-        default: "true"
       enable_archivista:
         description: Upload the build attestation to Archivista.
         default: "false"
@@ -57,8 +54,20 @@ tasks:
       cosign_key_path:
         description: Path to cosign private key file for signing container images and helm charts before attestation. Leave empty for keyless Sigstore signing.
         default: ""
+      sign_artifacts:
+        description: Sign package artifacts before OLM vouch. Set to false when artifacts are already signed elsewhere.
+        default: "true"
+      cosign_repository:
+        description: Optional cosign signature repository for OLM lookup. Defaults to registry.uds-mil.us/<olm_org>/signatures.
+        default: ""
+      registry_user_id:
+        description: Registry username for pushing cosign signatures.
+        default: ""
+      registry_password:
+        description: Registry password for pushing cosign signatures.
+        default: ""
     actions:
-      - description: Install tools, build Zarf package, and vouch
+      - description: Install tools, prepare Zarf package, and vouch
         shell:
           linux: bash
           darwin: bash
@@ -72,13 +81,16 @@ tasks:
           OLM_CAT="${{ .inputs.olm_cat }}"
           OLM_ORG="${{ .inputs.olm_org }}"
           ZARF_FLAVOR="${{ .inputs.zarf_flavor }}"
+          SIGN_ARTIFACTS="${{ .inputs.sign_artifacts }}"
+          COSIGN_REPOSITORY="${{ .inputs.cosign_repository }}"
+          REGISTRY_USER_ID="${{ .inputs.registry_user_id }}"
+          REGISTRY_PASSWORD="${{ .inputs.registry_password }}"
 
           BUILD_ARGS=(
             --with zarf_path="${{ .inputs.zarf_path }}"
             --with architecture="${{ .inputs.architecture }}"
             --with witness_key_path="${{ .inputs.witness_key_path }}"
             --with witness_workingdir="${{ .inputs.witness_workingdir }}"
-            --with enable_sigstore="${{ .inputs.enable_sigstore }}"
             --with enable_archivista="${{ .inputs.enable_archivista }}"
             --with fulcio_oidc_issuer="${{ .inputs.fulcio_oidc_issuer }}"
             --with build_command="${{ .inputs.build_command }}"
@@ -86,27 +98,38 @@ tasks:
           if [ -n "$ZARF_FLAVOR" ]; then
             BUILD_ARGS+=(--with zarf_flavor="$ZARF_FLAVOR")
           fi
-
+          echo "====== Running build with arguments: ${BUILD_ARGS[*]} ======"
           uds run build:zarf-package "${BUILD_ARGS[@]}"
 
-          PACKAGE=$(find . -maxdepth 1 -name "zarf-package-*.tar.zst" -type f | head -n 1)
+          PACKAGE=""
+          while IFS= read -r package; do
+            if [ -z "$PACKAGE" ] || [ "$package" -nt "$PACKAGE" ]; then
+              PACKAGE="$package"
+            fi
+          done < <(find . -maxdepth 1 -name "zarf-package-*.tar.zst" -type f)
           if [ -z "$PACKAGE" ]; then
             echo "No zarf-package-*.tar.zst file found after build."
             exit 1
           fi
+
           if [ -z "$OLM_CAT" ]; then
             echo "No OLM_CAT configured. Skipping OLM vouch for local run."
             exit 0
           fi
 
-          uds run olm:setup \
-            --with github_token="${{ .inputs.github_token }}"
+          # uds run olm:setup \
+          #   --with github_token="${{ .inputs.github_token }}"
 
-          uds run sign:artifacts \
-            --with zarf_package="$PACKAGE" \
-            --with registry_org="$OLM_ORG" \
-            --with cosign_key_path="${{ .inputs.cosign_key_path }}" \
-            --with enable_sigstore="${{ .inputs.enable_sigstore }}"
+          if [ "$SIGN_ARTIFACTS" = "true" ]; then
+            uds run sign:artifacts \
+              --with zarf_package="$PACKAGE" \
+              --with registry_org="$OLM_ORG" \
+              --with registry_user_id="$REGISTRY_USER_ID" \
+              --with registry_password="$REGISTRY_PASSWORD" \
+              --with cosign_key_path="${{ .inputs.cosign_key_path }}"
+          else
+            echo "Skipping artifact signing; using existing signatures for $PACKAGE."
+          fi
 
           ATTESTATION_FILES=()
           if [ -s zarf-create-witness.json ]; then
@@ -171,9 +194,14 @@ tasks:
           else
             echo "No Witness attestations were produced or provided; running OLM vouch without --attestations."
           fi
-          # cosign verify (inside OLM) must find signatures at the same repo used by sign:artifacts
-          export COSIGN_REPOSITORY="registry.uds-mil.us/${OLM_ORG}/signatures"
-
+          if [ -z "$COSIGN_REPOSITORY" ]; then
+            COSIGN_REPOSITORY="registry.uds-mil.us/signatures"
+            if [ -n "$OLM_ORG" ]; then
+              COSIGN_REPOSITORY="registry.uds-mil.us/${OLM_ORG}/signatures"
+            fi
+          fi
+          OLM_ARGS+=(--cosign-repository "$COSIGN_REPOSITORY")
+          echo "====== Running OLM build $(./olm version) ======"
           ./olm vouch "$PACKAGE" \
             "${OLM_ARGS[@]}" \
             --log-level debug

@@ -15,6 +15,10 @@ inputs:
   registry-password:
     description: Registry password for publishing
     required: true
+  zarf-package:
+    description: Path to the Zarf package tarball to publish. Defaults to the most recent zarf-package-*.tar.zst in the workspace.
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -27,11 +31,32 @@ runs:
         # Navigate to the udm-common repo root so tasks.yaml is discoverable.
         UDM_ROOT="$(realpath "${{ github.action_path }}/../../..")"
 
-        # Copy the package to the udm-common root so the publish task can find it.
-        cp zarf-package-*.tar.zst "$UDM_ROOT/"
+        PACKAGE_INPUT="${{ inputs.zarf-package }}"
+        if [ -n "$PACKAGE_INPUT" ]; then
+          PACKAGE_PATH="$(realpath "$PACKAGE_INPUT")"
+        else
+          PACKAGES=()
+          latest_package=""
+          while IFS= read -r package; do
+            PACKAGES+=("$package")
+            if [ -z "$latest_package" ] || [ "$package" -nt "$latest_package" ]; then
+              latest_package="$package"
+            fi
+          done < <(find "$GITHUB_WORKSPACE" -maxdepth 1 -name "zarf-package-*.tar.zst" -type f)
+          if [ "${#PACKAGES[@]}" -eq 0 ]; then
+            echo "No zarf-package-*.tar.zst file found to publish."
+            exit 1
+          fi
+          if [ "${#PACKAGES[@]}" -gt 1 ]; then
+            echo "Multiple Zarf packages found; publishing most recent. Set zarf-package to choose explicitly."
+            printf '  %s\n' "${PACKAGES[@]}"
+          fi
+          PACKAGE_PATH="$latest_package"
+        fi
 
         (cd "$UDM_ROOT" && uds run publish:zarf-package \
           --with registry="${{ inputs.registry }}" \
           --with registry_org="${{ inputs.registry-org }}" \
           --with registry_user_id="${{ inputs.registry-user-id }}" \
-          --with registry_password="${{ inputs.registry-password }}")
+          --with registry_password="${{ inputs.registry-password }}" \
+          --with zarf_package="$PACKAGE_PATH")

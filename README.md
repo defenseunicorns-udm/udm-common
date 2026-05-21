@@ -12,7 +12,8 @@ the UDS Army registry.
 | `attest` | `lint` | Wraps your `lint` task with Witness attestation |
 | `scan` | `security`, `gitleaks`, `opengrep` | Runs Gitleaks secrets scanning and OpenGrep SAST |
 | `build` | `zarf-package` | Builds a Zarf package under Witness attestation |
-| `vouch` | `package` | Builds, attests, and vouches via OLM.  Pushes attestations to CAT |
+| `sign` | `artifacts` | Signs container images and OCI helm charts with cosign |
+| `vouch` | `package` | Builds, signs, attests, and vouches via OLM. Pushes attestations to CAT |
 | `publish` | `zarf-package` | Publishes a vouched Zarf package to the UDS registry |
 | `olm` | `setup` | OLM CLI setup |
 
@@ -26,6 +27,7 @@ includes:
   - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/attest.yaml
   - build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/build.yaml
   - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/scan.yaml
+  - sign: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/sign.yaml
   - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/vouch.yaml
   - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/publish.yaml
   - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/olm.yaml
@@ -54,8 +56,9 @@ jobs:
             --with github_token="${{ secrets.GITHUB_TOKEN }}" \
             --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json" \
             --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
-            --with olm_cat=cat-api.uds-mil.us \
-            --with olm_org="<your-org-name>"
+            --with olm_cat="<cat-domain>" \
+            --with olm_org="<your-org-name>" \
+            --with cosign_key_path="${{ secrets.COSIGN_KEY_PATH }}"
       - run: |
           uds run publish:zarf-package \
             --with registry_org="<your-org-name>" \
@@ -86,7 +89,7 @@ jobs:
             --with attestations="gitleaks-witness.json,opengrep-witness.json" \
             --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
             --with zarf_path="services/${{ matrix.service }}" \
-            --with olm_cat=cat-api.uds-mil.us \
+            --with olm_cat="<cat-domain>" \
             --with olm_org="<your-org-name>"
       - run: |
           uds run publish:zarf-package \
@@ -118,7 +121,7 @@ If your build requires a custom script (pre-processing, non-standard flags, mult
 - task: vouch:package
   with:
     build_command: ./scripts/my-build.sh
-    olm_cat: cat-api.uds-mil.us
+    olm_cat: <cat-domain>
     olm_org: <your-org-name>
 ```
 
@@ -133,88 +136,63 @@ The custom command runs under Witness attestation — the resulting `zarf-create
 
 ## Run Locally
 
-Use the UDS CLI to execute tasks locally before you push or run CI.
+The full local flow needs a Witness key pair for task attestations and a cosign
+key pair for artifact signatures. `setup:witness` and `setup:cosign` download
+the required CLIs and place them on your `PATH`.
 
-- Run lint:
-
-```bash
-uds run lint
+```shell
+uds run setup:witness
+uds run setup:cosign
+openssl genpkey -algorithm ed25519 -outform PEM -out witness-key.pem
+openssl pkey -in witness-key.pem -pubout > witness-pub.pem
+cosign generate-key-pair
 ```
 
-- Run lint with Witness attestation (requires a local signing key or Sigstore OIDC):
+Wrap your repo's `lint` task with Witness:
 
-```bash
+```shell
 uds run attest:lint \
-  --with witness_key_path=/path/to/key
+  --with witness_key_path="$(pwd)/witness-key.pem"
 ```
 
-- Build a Zarf package locally:
+Run Gitleaks and OpenGrep SAST under Witness attestation:
 
-# Replace `<ARCH>` with `amd64` or `arm64` 
-```bash
-uds run build:zarf-package \
-  --with zarf_path=. \
-  --with architecture=<ARCH>
+```shell
+uds run scan:security \
+  --with witness_key_path="$(pwd)/witness-key.pem"
 ```
 
-- Build a flavored Zarf package locally:
+Build the Zarf package, sign package artifacts with cosign, and push
+attestations to CAT:
 
-```bash
-uds run build:zarf-package \
-  --with zarf_path=. \
-  --with architecture=<ARCH> \
-  --with zarf_flavor=upstream
-```
-
-- Build with a custom build command:
-
-```bash
-uds run build:zarf-package --with build_command="./scripts/my-build.sh"
-```
-
-- Build and vouch locally:
-
-```bash
+```shell
 uds run vouch:package \
   --with zarf_path=. \
   --with witness_key_path="$(pwd)/witness-key.pem" \
-  --with enable_sigstore=true \
-  --with olm_cat="cat-api.uds-mil.us" \
-  --with olm_org="<your-org>" \
+  --with olm_cat="<cat-domain>" \
+  --with olm_org="<org>" \
+  --with cosign_key_path="$(pwd)/cosign.key" \
+  --with registry_user_id="<registry-user-id>" \
+  --with registry_password="<registry-password>" \
   --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json" \
-  --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
-  --with github_token="$GITHUB_TOKEN" \
-  --with architecture=<ARCH>
+  --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json"
 ```
 
-- Build and vouch with a custom build command:
+Publish the Zarf package to the registry:
 
-```bash
-uds run vouch:package \
-  --with build_command="./scripts/my-build.sh" \
-  --with zarf_path=. \
-  --with witness_key_path="$(pwd)/witness-key.pem" \
-  --with enable_sigstore=true \
-  --with olm_cat="cat-api.uds-mil.us" \
-  --with olm_org="<your-org>" \
-  --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json" \
-  --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
-  --with github_token="$GITHUB_TOKEN" \
-  --with architecture=<ARCH>
+```shell
+uds run publish:zarf-package \
+  --with registry_org="<org>" \
+  --with registry_user_id="<registry-user-id>" \
+  --with registry_password="<registry-password>" \
+  --with zarf_package="zarf-package-<name>-<architecture>-<version>.tar.zst"
 ```
 
-- Test publish without pushing to a registry:
-
-```bash
-uds run publish:zarf-package --with dry_run=true
-```
-
-Notes:
-
-- `build_command` replaces the default `uds zarf package create` flow. When set, `zarf_path` and `architecture` are ignored by `build:zarf-package`.
-- `zarf_flavor` applies to normal `uds zarf package create` builds only. Omit it when your package does not define a flavor.
-- For local runs without Sigstore/OIDC, pass `--with enable_sigstore=false`. Add `--with witness_key_path=/path/to/key` when you still want local Witness signing.
-- `enable_archivista` is available on task-based builds and pipelines and is forwarded to the build attestation step.
+In CI, `publish:zarf-package` can usually rely on the workspace containing only
+the package produced by the current job. When `zarf_package` is unset, the task
+publishes the most recent `zarf-package-*.tar.zst` in the current directory. For
+local runs, pass `zarf_package` explicitly when old package artifacts may still
+be present.
 
 ## CI Provider Configuration
 
@@ -224,7 +202,7 @@ Supported by: `attest:lint`, `scan:security`, `scan:gitleaks`, `scan:opengrep`, 
 
 ### Configuring Sigstore for GitLab CI
 
-The snippets below show only the Sigstore-relevant configuration — they are not a complete GitLab CI pipeline. GitLab requires OIDC tokens to be explicitly requested via `id_tokens`; without this, `enable_sigstore=true` will fail.
+The snippets below show only the Sigstore-relevant configuration — they are not a complete GitLab CI pipeline. GitLab requires OIDC tokens to be explicitly requested via `id_tokens`; without this, Sigstore signing will fail.
 
 ```yaml
 # .gitlab-ci.yml — Sigstore OIDC token request (add to any job that signs with Witness)
@@ -235,18 +213,16 @@ id_tokens:
 scan:
   script:
     - uds run scan:security \
-        --with enable_sigstore=true \
-        --with fulcio_oidc_issuer=""$CI_SERVER_URL""
+        --with fulcio_oidc_issuer="$CI_SERVER_URL"
 ```
 
 ```yaml
 # tasks.yaml — pass fulcio_oidc_issuer through to vouch
 - task: vouch:package
   with:
-    enable_sigstore: "true"
     fulcio_oidc_issuer: "$CI_SERVER_URL"
     olm_identity_token: "$OLM_ID_TOKEN"
-    olm_cat: cat-api.uds-mil.us
+    olm_cat: <cat-domain>
     olm_org: <your-org-name>
     attestations: lint-witness.json,gitleaks-witness.json,opengrep-witness.json
     sarif_files: gitleaks.sarif.json,opengrep.sarif.json
@@ -262,6 +238,7 @@ See [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) for a complete annotate
 |--------|---------|-------------|
 | `REGISTRY_USER_ID` | `publish:zarf-package` | Username for publishing to `registry.uds-mil.us` |
 | `REGISTRY_PASSWORD` | `publish:zarf-package` | Password for publishing to `registry.uds-mil.us` |
+| `COSIGN_KEY_PATH` | `vouch:package` | Path to cosign private key for artifact signing (key-based); omit for keyless |
 
 ## Lint Task
 
@@ -277,6 +254,7 @@ includes:
   - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/setup.yaml
   - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/attest.yaml
   - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/scan.yaml
+  - sign: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/sign.yaml
   - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/vouch.yaml
   - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/publish.yaml
   - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/olm.yaml
