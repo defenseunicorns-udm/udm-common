@@ -90,14 +90,12 @@ ci:
     # Define that task in tasks.yaml; see examples/tasks.yaml.
     - |
       uds run attest:lint \
-        --with enable_sigstore=true \
         --with fulcio_oidc_issuer="$CI_SERVER_URL"
 
     # Project-specific: enxo/oootp scans apps/. Replace with your source path.
     - |
       uds run scan:security \
         --with opengrep_scan_path=apps/ \
-        --with enable_sigstore=true \
         --with fulcio_oidc_issuer="$CI_SERVER_URL"
 
   # Generic: pass witness attestations and SARIF reports to the publish job so
@@ -141,15 +139,18 @@ publish:
     - *install-deps
 
   script:
+
     # Project-specific:
     # - `uds run build-images` is an enxo/oootp build task.
     # - Replace build_command with your package build command, or omit it to
     #   let vouch:package use the default `uds zarf package create` behavior.
     - |
+      uds run build:zarf-package \
+          --with fulcio_oidc_issuer="$CI_SERVER_URL"
+    - |
       uds run vouch:package \
         --with olm_cat="$OLM_CAT" \
         --with olm_org="$OLM_ORG" \
-        --with enable_sigstore=true \
         --with fulcio_oidc_issuer="$CI_SERVER_URL" \
         --with olm_identity_token="$OLM_ID_TOKEN" \
         --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json" \

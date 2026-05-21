@@ -1,2 +1,9 @@
 .codex
 zarf-package*
+cosign.key
+cosign.pub
+*-witness.json
+witness-key.pem
+witness-pub.pem
+*.sarif.json
+olm
