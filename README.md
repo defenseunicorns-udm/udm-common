@@ -119,10 +119,9 @@ cut.
 By default `build:zarf-package` runs `uds zarf package create .`.
 If your build requires a custom script (pre-processing, non-standard flags, multi-step build), pass `build_command`:
 
-```yaml
-- task: build:zarf-package
-  with:
-    build_command: ./scripts/my-build.sh
+```shell
+uds run build:zarf-package \
+    --with build_command="scripts/build.sh"
 ```
 
 The custom command runs under Witness attestation — the resulting `zarf-create-witness.json` is identical in structure to a standard build. Scripts with complex quoting should be placed in a file and called by path rather than passed inline.
@@ -163,8 +162,7 @@ Build the Zarf package with Witness attestation:
 
 ```shell
 uds run build:zarf-package \
-  --with witness_key_path="$(pwd)/witness-key.pem" \
-  --with build_command="" #- use the default `uds zarf package create` behavior, or replace with a custom build script/command
+  --with witness_key_path="$(pwd)/witness-key.pem"
 ```
 
 Vouch for the package and push attestations to CAT:
