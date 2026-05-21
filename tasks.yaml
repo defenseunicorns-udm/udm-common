@@ -214,8 +214,9 @@ tasks:
           done
 
   - name: scan-and-vouch
-    description: Run security scans and vouch for the Zarf package
+    description: Run security scans, build, sign, and vouch for the Zarf package
     inputs:
+      # Scan
       gitleaks_scan_path:
         description: Directory for Gitleaks to scan
         default: .
@@ -223,26 +224,9 @@ tasks:
         description: Path to scan with OpenGrep
         default: .
       run_opengrep:
-        description: Whether to run OpenGrep SAST. Set to 'false' to skip.
+        description: Whether to run OpenGrep SAST. Set to false to skip.
         default: "true"
-      witness_key_path:
-        description: Path to a local signing key for Witness. Leave empty to use Sigstore browser auth instead.
-        default: ""
-      witness_workingdir:
-        description: Directory for Witness to run attested commands from.
-        default: ""
-      enable_archivista:
-        description: Upload build attestation to Archivista.
-        default: "false"
-      github_token:
-        description: GitHub token for OLM CLI installation from GHCR. Pass secrets.GITHUB_TOKEN in CI. Leave empty locally.
-        default: ""
-      olm_cat:
-        description: Domain of the CAT instance
-        default: ""
-      olm_org:
-        description: OLM organization name
-        default: ""
+      # Build
       zarf_path:
         description: Path to the directory containing zarf.yaml
         default: .
@@ -253,17 +237,56 @@ tasks:
         description: Optional flavor to pass to zarf package create. If not set, no flavor will be used.
         required: false
         default: ""
+      build_command:
+        description: Custom build command. When set, zarf_path and architecture are ignored.
+        default: ""
+      # Witness (shared by scan + build)
+      witness_key_path:
+        description: Path to a local signing key for Witness. Leave empty for Sigstore (CI).
+        default: ""
+      witness_workingdir:
+        description: Directory for Witness to run attested commands from.
+        default: ""
+      enable_archivista:
+        description: Upload attestations to Archivista.
+        default: "false"
+      fulcio_oidc_issuer:
+        description: OIDC issuer URL for Sigstore/Fulcio signing. Override for non-GitHub CI providers.
+        default: https://token.actions.githubusercontent.com
+      # Sign
+      cosign_key_path:
+        description: Path to cosign private key file. Leave empty for keyless Sigstore signing.
+        default: ""
+      sign_artifacts:
+        description: Sign package artifacts before OLM vouch. Set to false when artifacts are already signed.
+        default: "true"
+      cosign_repository:
+        description: Cosign signature repository for OLM lookup. Defaults to registry.uds-mil.us/<olm_org>/signatures.
+        default: ""
+      registry_user_id:
+        description: Registry username for pushing cosign signatures.
+        default: ""
+      registry_password:
+        description: Registry password for pushing cosign signatures.
+        default: ""
+      # Vouch
+      olm_cat:
+        description: Domain of the CAT instance
+        default: ""
+      olm_org:
+        description: OLM organization name
+        default: ""
+      olm_identity_token:
+        description: OIDC identity token for OLM CAT authentication. In GitLab CI, pass $OLM_ID_TOKEN.
+        default: ""
       test_directory:
         description: Path to the test directory to pass to olm vouch. Leave empty to skip.
         default: tests
       extra_attestations:
-        description: Comma-separated list of additional witness JSON attestation files to include in vouch
-        default: ""
-      cosign_key_path:
-        description: Path to cosign private key file. Passed to olm vouch --key for artifact signing.
+        description: Comma-separated list of additional Witness JSON attestation files to include
         default: ""
     actions:
-      - description: Run security scans then vouch for Zarf package
+      - description: Scan, build, sign, and vouch for Zarf package
         shell:
           linux: bash
           darwin: bash
@@ -274,64 +297,90 @@ tasks:
           EXTRA_ATTESTATIONS="${{ .inputs.extra_attestations }}"
           WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
           WITNESS_WORKINGDIR="${{ .inputs.witness_workingdir }}"
+          OLM_ORG="${{ .inputs.olm_org }}"
           ZARF_FLAVOR="${{ .inputs.zarf_flavor }}"
+          SIGN_ARTIFACTS="${{ .inputs.sign_artifacts }}"
+          COSIGN_REPOSITORY="${{ .inputs.cosign_repository }}"
+          REGISTRY_USER_ID="${{ .inputs.registry_user_id }}"
+          REGISTRY_PASSWORD="${{ .inputs.registry_password }}"
 
+          # Scan
           uds run scan:security \
             --with gitleaks_scan_path="${{ .inputs.gitleaks_scan_path }}" \
             --with opengrep_scan_path="${{ .inputs.opengrep_scan_path }}" \
             --with run_opengrep="${{ .inputs.run_opengrep }}" \
             --with witness_key_path="$WITNESS_KEY_PATH" \
             --with witness_workingdir="$WITNESS_WORKINGDIR" \
-            --with enable_archivista="${{ .inputs.enable_archivista }}"
+            --with enable_archivista="${{ .inputs.enable_archivista }}" \
+            --with fulcio_oidc_issuer="${{ .inputs.fulcio_oidc_issuer }}"
 
-          SARIF_FILE_LIST=()
-          SCAN_ATTESTATION_LIST=()
-          if [ -s gitleaks.sarif.json ]; then
-            SARIF_FILE_LIST+=(gitleaks.sarif.json)
-          fi
-          if [ -s gitleaks-witness.json ]; then
-            SCAN_ATTESTATION_LIST+=(gitleaks-witness.json)
-          fi
-          if [ "${{ .inputs.run_opengrep }}" = "true" ]; then
-            if [ -s opengrep.sarif.json ]; then
-              SARIF_FILE_LIST+=(opengrep.sarif.json)
-            fi
-            if [ -s opengrep-witness.json ]; then
-              SCAN_ATTESTATION_LIST+=(opengrep-witness.json)
-            fi
-          fi
-
-          SARIF_FILES=$(IFS=,; echo "${SARIF_FILE_LIST[*]}")
-          ALL_EXTRA=$(IFS=,; echo "${SCAN_ATTESTATION_LIST[*]}")
-          if [ -n "$EXTRA_ATTESTATIONS" ]; then
-            if [ -n "$ALL_EXTRA" ]; then
-              ALL_EXTRA="${ALL_EXTRA},$EXTRA_ATTESTATIONS"
-            else
-              ALL_EXTRA="$EXTRA_ATTESTATIONS"
-            fi
-          fi
-
-          VOUCH_ARGS=(
+          # Build
+          BUILD_ARGS=(
             --with zarf_path="${{ .inputs.zarf_path }}"
             --with architecture="${{ .inputs.architecture }}"
-            --with test_directory="${{ .inputs.test_directory }}"
-            --with github_token="${{ .inputs.github_token }}"
-            --with olm_cat="${{ .inputs.olm_cat }}"
-            --with olm_org="${{ .inputs.olm_org }}"
             --with witness_key_path="$WITNESS_KEY_PATH"
             --with witness_workingdir="$WITNESS_WORKINGDIR"
             --with enable_archivista="${{ .inputs.enable_archivista }}"
-            --with attestations="${ALL_EXTRA}"
-            --with sarif_files="${SARIF_FILES}"
-            --with cosign_key_path="${{ .inputs.cosign_key_path }}"
+            --with fulcio_oidc_issuer="${{ .inputs.fulcio_oidc_issuer }}"
+            --with build_command="${{ .inputs.build_command }}"
           )
           if [ -n "$ZARF_FLAVOR" ]; then
-            VOUCH_ARGS+=(--with zarf_flavor="$ZARF_FLAVOR")
+            BUILD_ARGS+=(--with zarf_flavor="$ZARF_FLAVOR")
           fi
-          uds run vouch:package "${VOUCH_ARGS[@]}"
+          uds run build:zarf-package "${BUILD_ARGS[@]}"
+
+          # Find package
+          PACKAGE=""
+          while IFS= read -r p; do
+            if [ -z "$PACKAGE" ] || [ "$p" -nt "$PACKAGE" ]; then
+              PACKAGE="$p"
+            fi
+          done < <(find . -maxdepth 1 -name "zarf-package-*.tar.zst" -type f)
+          if [ -z "$PACKAGE" ]; then
+            echo "No zarf-package-*.tar.zst file found after build."
+            exit 1
+          fi
+
+          # Sign
+          if [ "$SIGN_ARTIFACTS" = "true" ]; then
+            uds run sign:artifacts \
+              --with zarf_package="$PACKAGE" \
+              --with registry_org="$OLM_ORG" \
+              --with registry_user_id="$REGISTRY_USER_ID" \
+              --with registry_password="$REGISTRY_PASSWORD" \
+              --with cosign_key_path="${{ .inputs.cosign_key_path }}"
+          fi
+
+          # Collect attestations
+          SARIF_FILE_LIST=()
+          ATTESTATION_LIST=()
+          [ -s gitleaks.sarif.json ]   && SARIF_FILE_LIST+=(gitleaks.sarif.json)
+          [ -s gitleaks-witness.json ] && ATTESTATION_LIST+=(gitleaks-witness.json)
+          if [ "${{ .inputs.run_opengrep }}" = "true" ]; then
+            [ -s opengrep.sarif.json ]   && SARIF_FILE_LIST+=(opengrep.sarif.json)
+            [ -s opengrep-witness.json ] && ATTESTATION_LIST+=(opengrep-witness.json)
+          fi
+          [ -s zarf-create-witness.json ] && ATTESTATION_LIST+=(zarf-create-witness.json)
+
+          SARIF_FILES=$(IFS=,; echo "${SARIF_FILE_LIST[*]}")
+          ALL_ATTESTATIONS=$(IFS=,; echo "${ATTESTATION_LIST[*]}")
+          if [ -n "$EXTRA_ATTESTATIONS" ]; then
+            ALL_ATTESTATIONS="${ALL_ATTESTATIONS:+${ALL_ATTESTATIONS},}${EXTRA_ATTESTATIONS}"
+          fi
+
+          # Vouch
+          uds run vouch:package \
+            --with zarf_package="$PACKAGE" \
+            --with olm_cat="${{ .inputs.olm_cat }}" \
+            --with olm_org="$OLM_ORG" \
+            --with olm_identity_token="${{ .inputs.olm_identity_token }}" \
+            --with test_directory="${{ .inputs.test_directory }}" \
+            --with cosign_repository="$COSIGN_REPOSITORY" \
+            --with attestations="$ALL_ATTESTATIONS" \
+            --with sarif_files="$SARIF_FILES"
 
   - name: pipeline
-    description: Full local pipeline - scan, vouch, and publish
+    description: Full local pipeline - lint, scan, build, sign, vouch, and publish
     inputs:
       gitleaks_scan_path:
         description: Directory for Gitleaks to scan
@@ -340,38 +389,8 @@ tasks:
         description: Path to scan with OpenGrep
         default: .
       run_opengrep:
-        description: Whether to run OpenGrep SAST. Set to 'false' to skip.
+        description: Whether to run OpenGrep SAST. Set to false to skip.
         default: "true"
-      witness_key_path:
-        description: Path to a local signing key for Witness. Leave empty to use Sigstore browser auth instead.
-        default: ""
-      witness_workingdir:
-        description: Directory for Witness to run attested commands from.
-        default: ""
-      enable_archivista:
-        description: Upload build attestation to Archivista.
-        default: "false"
-      github_token:
-        description: GitHub token for OLM CLI installation from GHCR. Pass secrets.GITHUB_TOKEN in CI. Leave empty locally.
-        default: ""
-      olm_cat:
-        description: Domain of the CAT instance
-        default: ""
-      olm_org:
-        description: OLM organization name
-        default: ""
-      registry:
-        description: OCI registry to publish to
-        default: ""
-      registry_org:
-        description: Organization path within the registry
-        default: ""
-      registry_user_id:
-        description: Registry username for publishing
-        default: ""
-      registry_password:
-        description: Registry password for publishing
-        default: ""
       zarf_path:
         description: Path to the directory containing zarf.yaml
         default: .
@@ -379,17 +398,59 @@ tasks:
         description: Target architecture for the Zarf package
         default: amd64
       zarf_flavor:
-        description: Optional flavor to pass to zarf package create. If not set, no flavor will be used.
+        description: Optional flavor to pass to zarf package create.
         required: false
+        default: ""
+      build_command:
+        description: Custom build command. When set, zarf_path and architecture are ignored.
+        default: ""
+      witness_key_path:
+        description: Path to a local signing key for Witness. Leave empty for Sigstore (CI).
+        default: ""
+      witness_workingdir:
+        description: Directory for Witness to run attested commands from.
+        default: ""
+      enable_archivista:
+        description: Upload attestations to Archivista.
+        default: "false"
+      fulcio_oidc_issuer:
+        description: OIDC issuer URL for Sigstore/Fulcio signing. Override for non-GitHub CI providers.
+        default: https://token.actions.githubusercontent.com
+      cosign_key_path:
+        description: Path to cosign private key file. Leave empty for keyless Sigstore signing.
+        default: ""
+      cosign_repository:
+        description: Cosign signature repository for OLM lookup. Defaults to registry.uds-mil.us/<olm_org>/signatures.
+        default: ""
+      sign_artifacts:
+        description: Sign package artifacts before OLM vouch. Set to false when artifacts are already signed.
+        default: "true"
+      olm_cat:
+        description: Domain of the CAT instance
+        default: ""
+      olm_org:
+        description: OLM organization name
+        default: ""
+      olm_identity_token:
+        description: OIDC identity token for OLM CAT authentication. In GitLab CI, pass $OLM_ID_TOKEN.
         default: ""
       test_directory:
         description: Path to the test directory to pass to olm vouch. Leave empty to skip.
         default: tests
-      cosign_key_path:
-        description: Path to cosign private key file. Passed to olm vouch --key for artifact signing.
+      registry:
+        description: OCI registry to publish to
+        default: ""
+      registry_org:
+        description: Organization path within the registry
+        default: ""
+      registry_user_id:
+        description: Registry username for publishing and cosign signatures.
+        default: ""
+      registry_password:
+        description: Registry password for publishing and cosign signatures.
         default: ""
     actions:
-      - description: Run full pipeline - scan, vouch, publish
+      - description: Run full pipeline - lint, scan, build, sign, vouch, publish
         shell:
           linux: bash
           darwin: bash
@@ -402,23 +463,30 @@ tasks:
 
           uds run attest:lint \
             --with witness_key_path="$WITNESS_KEY_PATH" \
-            --with witness_workingdir="${{ .inputs.witness_workingdir }}"
+            --with witness_workingdir="${{ .inputs.witness_workingdir }}" \
+            --with fulcio_oidc_issuer="${{ .inputs.fulcio_oidc_issuer }}"
 
           PIPELINE_ARGS=(
             --with gitleaks_scan_path="${{ .inputs.gitleaks_scan_path }}"
             --with opengrep_scan_path="${{ .inputs.opengrep_scan_path }}"
             --with run_opengrep="${{ .inputs.run_opengrep }}"
+            --with zarf_path="${{ .inputs.zarf_path }}"
+            --with architecture="${{ .inputs.architecture }}"
+            --with build_command="${{ .inputs.build_command }}"
             --with witness_key_path="$WITNESS_KEY_PATH"
             --with witness_workingdir="${{ .inputs.witness_workingdir }}"
             --with enable_archivista="${{ .inputs.enable_archivista }}"
-            --with github_token="${{ .inputs.github_token }}"
+            --with fulcio_oidc_issuer="${{ .inputs.fulcio_oidc_issuer }}"
+            --with cosign_key_path="${{ .inputs.cosign_key_path }}"
+            --with cosign_repository="${{ .inputs.cosign_repository }}"
+            --with sign_artifacts="${{ .inputs.sign_artifacts }}"
+            --with registry_user_id="${{ .inputs.registry_user_id }}"
+            --with registry_password="${{ .inputs.registry_password }}"
             --with olm_cat="${{ .inputs.olm_cat }}"
             --with olm_org="${{ .inputs.olm_org }}"
-            --with zarf_path="${{ .inputs.zarf_path }}"
-            --with architecture="${{ .inputs.architecture }}"
+            --with olm_identity_token="${{ .inputs.olm_identity_token }}"
             --with test_directory="${{ .inputs.test_directory }}"
             --with extra_attestations="lint-witness.json"
-            --with cosign_key_path="${{ .inputs.cosign_key_path }}"
           )
           if [ -n "$ZARF_FLAVOR" ]; then
             PIPELINE_ARGS+=(--with zarf_flavor="$ZARF_FLAVOR")

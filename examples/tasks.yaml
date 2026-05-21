@@ -70,14 +70,12 @@ tasks:
   #       with:
   #         build_command: ./scripts/my-build.sh
 
-  # Equivalent via vouch (builds + vouches in one step):
-  # - name: vouch
-  #   description: Build and vouch with a custom build script
+  # To build + scan + sign + vouch in one step, use scan-and-vouch instead:
+  # - name: ci
+  #   description: Full scan, build, sign, and vouch
   #   actions:
-  #     - task: vouch:package
+  #     - task: scan-and-vouch
   #       with:
   #         build_command: ./scripts/my-build.sh
-  #         olm_cat: cat-api.uds-mil.us
+  #         olm_cat: <cat-domain>
   #         olm_org: <your-org-name>
-  #         attestations: lint-witness.json,gitleaks-witness.json,opengrep-witness.json
-  #         sarif_files: gitleaks.sarif.json,opengrep.sarif.json

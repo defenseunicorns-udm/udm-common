@@ -13,7 +13,7 @@ the UDS Army registry.
 | `scan` | `security`, `gitleaks`, `opengrep` | Runs Gitleaks secrets scanning and OpenGrep SAST |
 | `build` | `zarf-package` | Builds a Zarf package under Witness attestation |
 | `sign` | `artifacts` | Signs container images and OCI helm charts with cosign |
-| `vouch` | `package` | Builds, signs, attests, and vouches via OLM. Pushes attestations to CAT |
+| `vouch` | `package` | Vouches for a signed Zarf package via OLM, pushing attestations to CAT |
 | `publish` | `zarf-package` | Publishes a vouched Zarf package to the UDS registry |
 | `olm` | `setup` | OLM CLI setup |
 
@@ -51,14 +51,20 @@ jobs:
       - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@9aaad66b21c7637b5be3d6aafdb21c9e7ff1df2a # v0.10.3
       - run: uds run attest:lint
       - run: uds run scan:security
+      - run: uds run build:zarf-package
+      - run: |
+          uds run sign:artifacts \
+            --with zarf_package="$(find . -maxdepth 1 -name 'zarf-package-*.tar.zst' -type f | head -1)" \
+            --with registry_org="<your-org-name>" \
+            --with registry_user_id="${{ secrets.REGISTRY_USER_ID }}" \
+            --with registry_password="${{ secrets.REGISTRY_PASSWORD }}" \
+            --with cosign_key_path="${{ secrets.COSIGN_KEY_PATH }}"
       - run: |
           uds run vouch:package \
-            --with github_token="${{ secrets.GITHUB_TOKEN }}" \
-            --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json" \
+            --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
             --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
             --with olm_cat="<cat-domain>" \
-            --with olm_org="<your-org-name>" \
-            --with cosign_key_path="${{ secrets.COSIGN_KEY_PATH }}"
+            --with olm_org="<your-org-name>"
       - run: |
           uds run publish:zarf-package \
             --with registry_org="<your-org-name>" \
@@ -84,11 +90,19 @@ jobs:
             --with gitleaks_scan_path="services/${{ matrix.service }}" \
             --with opengrep_scan_path="services/${{ matrix.service }}"
       - run: |
+          uds run build:zarf-package \
+            --with zarf_path="services/${{ matrix.service }}"
+      - run: |
+          uds run sign:artifacts \
+            --with zarf_package="$(find . -maxdepth 1 -name 'zarf-package-*.tar.zst' -type f | head -1)" \
+            --with registry_org="<your-org-name>" \
+            --with registry_user_id="${{ secrets.REGISTRY_USER_ID }}" \
+            --with registry_password="${{ secrets.REGISTRY_PASSWORD }}" \
+            --with cosign_key_path="${{ secrets.COSIGN_KEY_PATH }}"
+      - run: |
           uds run vouch:package \
-            --with github_token="${{ secrets.GITHUB_TOKEN }}" \
-            --with attestations="gitleaks-witness.json,opengrep-witness.json" \
+            --with attestations="gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
             --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
-            --with zarf_path="services/${{ matrix.service }}" \
             --with olm_cat="<cat-domain>" \
             --with olm_org="<your-org-name>"
       - run: |
@@ -162,19 +176,31 @@ uds run scan:security \
   --with witness_key_path="$(pwd)/witness-key.pem"
 ```
 
-Build the Zarf package, sign package artifacts with cosign, and push
-attestations to CAT:
+Build the Zarf package with Witness attestation:
+
+```shell
+uds run build:zarf-package \
+  --with witness_key_path="$(pwd)/witness-key.pem"
+```
+
+Sign package artifacts with cosign:
+
+```shell
+uds run sign:artifacts \
+  --with zarf_package="$(find . -maxdepth 1 -name 'zarf-package-*.tar.zst' | head -1)" \
+  --with registry_org="<org>" \
+  --with registry_user_id="<registry-user-id>" \
+  --with registry_password="<registry-password>" \
+  --with cosign_key_path="$(pwd)/cosign.key"
+```
+
+Vouch for the package and push attestations to CAT:
 
 ```shell
 uds run vouch:package \
-  --with zarf_path=. \
-  --with witness_key_path="$(pwd)/witness-key.pem" \
   --with olm_cat="<cat-domain>" \
   --with olm_org="<org>" \
-  --with cosign_key_path="$(pwd)/cosign.key" \
-  --with registry_user_id="<registry-user-id>" \
-  --with registry_password="<registry-password>" \
-  --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json" \
+  --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
   --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json"
 ```
 

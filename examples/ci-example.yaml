@@ -1,4 +1,6 @@
-# This is an example GitHub Actions workflow that demonstrates how to use UDM Common tasks in a CI pipeline. It includes steps for linting, security scanning, vouching, and publishing a package. You can customize the tasks and parameters as needed for your specific project.
+# Example GitHub Actions workflow using UDM Common tasks.
+# Each step calls a discrete task — lint, scan, build, sign, vouch, publish.
+# Include the relevant task namespaces in your repo's tasks.yaml (see examples/tasks.yaml).
 name: CI
 
 on:
@@ -30,19 +32,30 @@ jobs:
         run: uds run attest:lint
 
       - name: Security Scan
-        run: uds run scan:security \
-          --with opengrep_scan_path=/path/to/source_code # Adjust this as needed for your project
+        run: |
+          uds run scan:security \
+            --with opengrep_scan_path=. # Adjust as needed for your project
 
-      # --with build_command is optional. Use it if your build process is more complex than 'zarf package create' and requires additional setup steps.
-      # The command will run under Witness attestation, and you can use the same environment variables as in the zarf-package task (e.g. $ZARF_PATH, $ARCHITECTURE) to customize it.
-      # It is expected that this command will produce a zarf package. If you use this, the zarf_path and architecture inputs will be ignored since those should be handled in your custom command.
+      # --with build_command is optional. Use it when your build requires more than
+      # 'uds zarf package create' (e.g. pre-processing, non-standard flags).
+      - name: Build
+        run: uds run build:zarf-package
+
+      - name: Sign
+        run: |
+          uds run sign:artifacts \
+            --with zarf_package="$(find . -maxdepth 1 -name 'zarf-package-*.tar.zst' -type f -newer /dev/null | head -1)" \
+            --with registry_org="<your-org-name>" \
+            --with registry_user_id="${{ secrets.REGISTRY_USER_ID }}" \
+            --with registry_password="${{ secrets.REGISTRY_PASSWORD }}" \
+            --with cosign_key_path="${{ secrets.COSIGN_KEY_PATH }}"
+
       - name: Vouch
         run: |
           uds run vouch:package \
-            --with github_token="${{ secrets.GITHUB_TOKEN }}" \
-            --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json" \
+            --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
             --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
-            --with olm_cat=cat-api.uds-mil.us \
+            --with olm_cat="<cat-domain>" \
             --with olm_org="<your-org-name>"
 
       - name: Publish
