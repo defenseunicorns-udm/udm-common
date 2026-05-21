@@ -119,16 +119,6 @@ cut.
 By default `build:zarf-package` runs `uds zarf package create .`.
 If your build requires a custom script (pre-processing, non-standard flags, multi-step build), pass `build_command`:
 
-**Via vouch:**
-```yaml
-- task: vouch:package
-  with:
-    build_command: ./scripts/my-build.sh
-    olm_cat: <cat-domain>
-    olm_org: <your-org-name>
-```
-
-**Build only:**
 ```yaml
 - task: build:zarf-package
   with:
@@ -138,6 +128,11 @@ If your build requires a custom script (pre-processing, non-standard flags, mult
 The custom command runs under Witness attestation — the resulting `zarf-create-witness.json` is identical in structure to a standard build. Scripts with complex quoting should be placed in a file and called by path rather than passed inline.
 
 ## Run Locally
+
+| Lint with Witness attestation | Run SAST scans with Witness attestation | Build Zarf package with Witness attestation | Vouch for package and push attestations to CAT | Publish package to registry ||
+|---|---|---|---|---|---|
+| `attest-lint` | → `scan:security` | → `build:zarf-package` | → `vouch:package` | → `publish:zarf-package` |  |
+|
 
 The full local flow needs a Witness key pair for task attestations. `setup:witness` will download
 the required CLIs and place them on your `PATH`.

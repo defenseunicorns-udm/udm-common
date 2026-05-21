@@ -46,7 +46,7 @@ jobs:
       - name: Security Scan
         run: |
           uds run scan:security \
-            --with opengrep_scan_path=src/
+            --with opengrep_scan_path=src/ \
             --with gitleaks_scan_path=src/
 
       - name: Set up Docker Buildx
