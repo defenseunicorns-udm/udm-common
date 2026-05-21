@@ -48,14 +48,18 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@9aaad66b21c7637b5be3d6aafdb21c9e7ff1df2a # v0.10.3
       - run: uds run attest:lint
-      - run: uds run scan:security
+      - run: |
+          uds run scan:security \
+            --with gitleaks_scan_path="." \
+            --with opengrep_scan_path="."
+
       - run: uds run build:zarf-package
 
       - run: |
           uds run vouch:package \
             --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
             --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
-            --with olm_cat="<cat-domain>" \
+            --with olm_cat="cat-api.uds-mil.us" \
             --with olm_org="<your-org-name>"
       - run: |
           uds run publish:zarf-package \
@@ -88,7 +92,7 @@ jobs:
           uds run vouch:package \
             --with attestations="gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
             --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
-            --with olm_cat="<cat-domain>" \
+            --with olm_cat="cat-api.uds-mil.us" \
             --with olm_org="<your-org-name>"
       - run: |
           uds run publish:zarf-package \
@@ -155,7 +159,9 @@ Run Gitleaks and OpenGrep SAST under Witness attestation:
 
 ```shell
 uds run scan:security \
-  --with witness_key_path="$(pwd)/witness-key.pem"
+  --with witness_key_path="$(pwd)/witness-key.pem" \
+  --with gitleaks_scan_path="." \
+  --with opengrep_scan_path="."
 ```
 
 Build the Zarf package with Witness attestation:
