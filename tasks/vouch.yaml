@@ -125,7 +125,7 @@ tasks:
           echo "====== Installing OLM CLI plugin ======"
           uds run olm:setup
           echo "====== Running OLM vouch $(./olm version) ======"
-          
+
           ./olm vouch "$PACKAGE" \
             "${OLM_ARGS[@]}" \
             --log-level debug
