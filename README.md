@@ -116,7 +116,7 @@ cut.
 
 ## Custom Build Commands
 
-By default, `vouch:package` and `build:zarf-package` run `uds zarf package create`.
+By default `build:zarf-package` runs `uds zarf package create .`.
 If your build requires a custom script (pre-processing, non-standard flags, multi-step build), pass `build_command`:
 
 **Via vouch:**
@@ -168,7 +168,8 @@ Build the Zarf package with Witness attestation:
 
 ```shell
 uds run build:zarf-package \
-  --with witness_key_path="$(pwd)/witness-key.pem"
+  --with witness_key_path="$(pwd)/witness-key.pem" \
+  --with build_command="" #- use the default `uds zarf package create` behavior, or replace with a custom build script/command
 ```
 
 Vouch for the package and push attestations to CAT:
