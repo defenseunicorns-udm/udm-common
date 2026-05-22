@@ -16,6 +16,26 @@ the UDS Army registry.
 | `publish` | `zarf-package` | Publishes a vouched Zarf package to the UDS registry |
 | `olm` | `setup` | OLM CLI setup |
 
+## Pipeline Overview
+
+Every package goes through these stages in order:
+
+1. **Lint** — `attest:lint` runs your repo's `lint` task and signs the result
+2. **Scan** — `scan:security` runs Gitleaks (secrets) and OpenGrep (SAST) and signs each result
+3. **Build + Vouch** — `vouch:package` builds the Zarf package, then submits all signed attestations to OLM/CAT
+4. **Publish** — `publish:zarf-package` pushes the package to the UDS Army registry
+
+> **Tooling glossary**
+> - **Witness** — signs each pipeline step, producing `.json` attestation files as evidence
+> - **Sigstore / Fulcio** — keyless signing via OIDC (e.g. GitHub Actions token — no stored key needed in CI)
+> - **OLM / CAT** — UDS Army compliance tracking; receives signed attestations during `vouch`
+
+## Prerequisites
+
+**You must define a `lint` task** in your repo's `tasks.yaml` before using `attest:lint` — `attest:lint`
+calls it. See [`examples/tasks.yaml`](examples/tasks.yaml) for patterns covering Python, Go, TypeScript,
+and monorepos.
+
 ## Quickstart
 
 Include task namespaces from this repo in your `tasks.yaml`:
@@ -35,6 +55,8 @@ includes:
 See [`examples/tasks.yaml`](examples/tasks.yaml) for a full starting point.
 
 ### Minimal CI workflow (GitHub Actions)
+
+> **Note:** `vouch:package` calls `build:zarf-package` automatically.
 
 ```yaml
 jobs:
@@ -95,7 +117,97 @@ jobs:
             --with registry_password="${{ secrets.REGISTRY_PASSWORD }}"
 ```
 
-### Security Scan Scope
+## Required Secrets
+
+| Secret | Used By | Description |
+|--------|---------|-------------|
+| `REGISTRY_USER_ID` | `publish:zarf-package` | Username for publishing to `registry.uds-mil.us` |
+| `REGISTRY_PASSWORD` | `publish:zarf-package` | Password for publishing to `registry.uds-mil.us` |
+
+## Run Locally
+
+Use the UDS CLI to execute tasks locally before you push or run CI.
+The full local flow needs a Witness key pair for task attestations. `setup:witness` will download the required CLIs and place them on your PATH.
+
+```shell
+uds run setup:witness
+openssl genpkey -algorithm ed25519 -outform PEM -out witness-key.pem
+openssl pkey -in witness-key.pem -pubout > witness-pub.pem
+```
+
+**Wrap your repo's lint task with Witness:**
+
+```shell
+uds run attest:lint \
+  --with witness_key_path="$(pwd)/witness-key.pem"
+```
+
+**Run Gitleaks and OpenGrep SAST under Witness attestation:**
+
+```shell
+uds run scan:security \
+  --with witness_key_path="$(pwd)/witness-key.pem" \
+  --with gitleaks_scan_path="." \
+  --with opengrep_scan_path="."
+```
+
+**Build the Zarf package with Witness attestation:**
+
+> **Note:** `vouch:package` calls this step automatically. Run it separately only if you want to
+> iterate on the build before vouching.
+
+```shell
+uds run build:zarf-package \
+  --with witness_key_path="$(pwd)/witness-key.pem"
+```
+
+**Vouch for the package and push attestations to CAT:**
+
+```shell
+uds run vouch:package \
+  --with olm_cat="<cat-domain>" \
+  --with olm_org="<org>" \
+  --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
+  --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json"
+```
+
+**Publish the Zarf package to the registry:**
+
+```shell
+uds run publish:zarf-package \
+  --with registry_org="<org>" \
+  --with registry_user_id="<registry-user-id>" \
+  --with registry_password="<registry-password>" \
+  --with zarf_package="zarf-package-<name>-<architecture>-<version>.tar.zst"
+```
+
+## Custom Build Commands
+
+By default, `vouch:package` and `build:zarf-package` run `uds zarf package create`.
+If your build requires a custom script (pre-processing, non-standard flags, multi-step build), pass `build_command`:
+
+**Via vouch:**
+```shell
+uds run vouch:package \
+  --with build_command="scripts/build.sh"
+```
+
+**Build only:**
+```shell
+uds run build:zarf-package \
+  --with build_command="scripts/build.sh"
+```
+
+In CI, `publish:zarf-package` can usually rely on the workspace containing only the package produced by the current job. When `zarf_package` is unset, the task publishes the most recent `zarf-package-*.tar.zst` in the current directory. For local runs, pass `zarf_package` explicitly when old package artifacts may still be present.
+
+Notes:
+
+- `build_command` replaces the default `uds zarf package create` flow. When set, `zarf_path` and `architecture` are ignored by `build:zarf-package`. The command runs under Witness attestation — the resulting `zarf-create-witness.json` is identical in structure to a standard build. Scripts with complex quoting should be placed in a file and called by path rather than passed inline.
+- `zarf_flavor` applies to normal `uds zarf package create` builds only. Omit it when your package does not define a flavor.
+- For local runs, Witness falls back to a browser-based OIDC flow automatically. Pass `--with witness_key_path=/path/to/key` to sign with a local key instead.
+- `enable_archivista` is available on task-based builds and pipelines and is forwarded to the build attestation step.
+
+## Security Scan Scope
 
 `scan:gitleaks` scans tracked Git commits in the current package iteration, not
 the live working directory. It compares `HEAD` to the local `origin/main` or
@@ -107,114 +219,6 @@ service that is being packaged.
 For monorepos, pass the same service path to `gitleaks_scan_path`,
 `opengrep_scan_path`, and `zarf_path` so the evidence matches the package being
 cut.
-
-## Custom Build Commands
-
-By default, `vouch:package` and `build:zarf-package` run `uds zarf package create`.
-If your build requires a custom script (pre-processing, non-standard flags, multi-step build), pass `build_command`:
-
-**Via vouch:**
-```yaml
-- task: vouch:package
-  with:
-    build_command: ./scripts/my-build.sh
-    olm_cat: cat-api.uds-mil.us
-    olm_org: <your-org-name>
-```
-
-**Build only:**
-```yaml
-- task: build:zarf-package
-  with:
-    build_command: ./scripts/my-build.sh
-```
-
-The custom command runs under Witness attestation — the resulting `zarf-create-witness.json` is identical in structure to a standard build. Scripts with complex quoting should be placed in a file and called by path rather than passed inline.
-
-## Run Locally
-
-Use the UDS CLI to execute tasks locally before you push or run CI.
-
-- Run lint:
-
-```bash
-uds run lint
-```
-
-- Run lint with Witness attestation (requires a local signing key or Sigstore OIDC):
-
-```bash
-uds run attest:lint \
-  --with witness_key_path=/path/to/key
-```
-
-- Build a Zarf package locally:
-
-# Replace `<ARCH>` with `amd64` or `arm64` 
-```bash
-uds run build:zarf-package \
-  --with zarf_path=. \
-  --with architecture=<ARCH>
-```
-
-- Build a flavored Zarf package locally:
-
-```bash
-uds run build:zarf-package \
-  --with zarf_path=. \
-  --with architecture=<ARCH> \
-  --with zarf_flavor=upstream
-```
-
-- Build with a custom build command:
-
-```bash
-uds run build:zarf-package --with build_command="./scripts/my-build.sh"
-```
-
-- Build and vouch locally:
-
-```bash
-uds run vouch:package \
-  --with zarf_path=. \
-  --with witness_key_path="$(pwd)/witness-key.pem" \
-  --with enable_sigstore=true \
-  --with olm_cat="cat-api.uds-mil.us" \
-  --with olm_org="<your-org>" \
-  --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json" \
-  --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
-  --with github_token="$GITHUB_TOKEN" \
-  --with architecture=<ARCH>
-```
-
-- Build and vouch with a custom build command:
-
-```bash
-uds run vouch:package \
-  --with build_command="./scripts/my-build.sh" \
-  --with zarf_path=. \
-  --with witness_key_path="$(pwd)/witness-key.pem" \
-  --with enable_sigstore=true \
-  --with olm_cat="cat-api.uds-mil.us" \
-  --with olm_org="<your-org>" \
-  --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json" \
-  --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
-  --with github_token="$GITHUB_TOKEN" \
-  --with architecture=<ARCH>
-```
-
-- Test publish without pushing to a registry:
-
-```bash
-uds run publish:zarf-package --with dry_run=true
-```
-
-Notes:
-
-- `build_command` replaces the default `uds zarf package create` flow. When set, `zarf_path` and `architecture` are ignored by `build:zarf-package`.
-- `zarf_flavor` applies to normal `uds zarf package create` builds only. Omit it when your package does not define a flavor.
-- For local runs without Sigstore/OIDC, pass `--with enable_sigstore=false`. Add `--with witness_key_path=/path/to/key` when you still want local Witness signing.
-- `enable_archivista` is available on task-based builds and pipelines and is forwarded to the build attestation step.
 
 ## CI Provider Configuration
 
@@ -256,13 +260,6 @@ scan:
 
 See [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) for a complete annotated pipeline.
 
-## Required Secrets
-
-| Secret | Used By | Description |
-|--------|---------|-------------|
-| `REGISTRY_USER_ID` | `publish:zarf-package` | Username for publishing to `registry.uds-mil.us` |
-| `REGISTRY_PASSWORD` | `publish:zarf-package` | Password for publishing to `registry.uds-mil.us` |
-
 ## Lint Task
 
 `attest:lint` wraps your repo's `lint` task with Witness attestation. **You
@@ -270,17 +267,7 @@ must define a `lint` task in your repo's `tasks.yaml`** — `attest:lint` calls
 it. See [`examples/tasks.yaml`](examples/tasks.yaml) for patterns covering
 Python, Go, TypeScript, and monorepos.
 
-Include all task namespaces in your repo's `tasks.yaml`:
-
-```yaml
-includes:
-  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/setup.yaml
-  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/attest.yaml
-  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/scan.yaml
-  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/vouch.yaml
-  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/publish.yaml
-  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/olm.yaml
-```
+Use the same `includes` block from [Quickstart](#quickstart) in your repo's `tasks.yaml`.
 
 ## Examples
 
