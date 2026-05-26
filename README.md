@@ -32,6 +32,34 @@ Every package goes through these stages in order:
 
 ## Prerequisites
 
+### UDS CLI
+
+All tasks require the [UDS CLI](https://github.com/defenseunicorns/uds-cli). Install it before running any `uds run` command.
+
+**GitHub Actions** — use the bundled setup action (already included in [`examples/ci-example.yaml`](examples/ci-example.yaml)):
+
+```yaml
+- uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@9aaad66b21c7637b5be3d6aafdb21c9e7ff1df2a # v0.10.3
+```
+
+**Other CI / local** — download the binary directly:
+
+```shell
+# renovate: datasource=github-releases depName=defenseunicorns/uds-cli
+UDS_VERSION=v0.31.0
+curl --retry-all-errors --retry 5 -fSL \
+  "https://github.com/defenseunicorns/uds-cli/releases/download/${UDS_VERSION}/uds-cli_${UDS_VERSION}_Linux_amd64" \
+  -o uds
+chmod +x uds
+sudo mv uds /usr/local/bin/uds
+```
+
+See [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) for a complete GitLab install snippet with caching.
+
+> **Keep versions current:** use [Renovate](https://docs.renovatebot.com/) to auto-update both the UDS CLI version pin above and your `udm-common` task include URLs. The inline `# renovate:` comments in the snippets above and in `examples/` are already wired for Renovate's GitHub Releases datasource.
+
+### Lint task
+
 **You must define a `lint` task** in your repo's `tasks.yaml` before using `attest:lint` — `attest:lint`
 calls it. See [`examples/tasks.yaml`](examples/tasks.yaml) for patterns covering Python, Go, TypeScript,
 and monorepos.
