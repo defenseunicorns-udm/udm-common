@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Repo Is
 
-Shared task library for UDS Army teams. Provides reusable Maru/UDS task namespaces that teams include in their own `tasks.yaml` to get a complete supply-chain-security pipeline: lint → scan → build → vouch → publish.
+Shared task library for ISV's onboarding into the UDS Army platform. Provides reusable Maru/UDS task namespaces that teams include in their own `tasks.yaml` to get a complete supply-chain-security pipeline: lint → scan → build → vouch → publish.
 
 All automation uses **UDS CLI** (task runner). No npm, go, or traditional build systems.
 
