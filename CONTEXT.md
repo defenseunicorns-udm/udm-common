@@ -10,11 +10,12 @@ A team or organization of engineers building an application to be onboarded into
 ### Organization
 The administrative unit in CAT that groups a consumer's packages. Supplied as `olm_org` when running tasks. A consumer may have multiple packages within one organization. Each package is identified in the CAT UI by `metadata.name` and `metadata.version` from its `zarf.yaml`.
 
-**Required onboarding steps (must complete before pipeline can vouch):**
+**Required onboarding steps (must complete before pipeline can vouch and publish):**
 1. Provide org name to Defense Unicorns for provisioning in CAT
 2. Provide email addresses of team members who need CAT access
-3. Team members sign up for accounts at `sso.uds-mil.us`
+3. Team members sign up for accounts at `sso.uds-mil.us` — the shared Keycloak instance used by both CAT and the Registry
 4. In the CAT UI, configure an allowlist of repos/projects permitted for Fulcio OIDC token exchange — currently supports `github.com` and `gitlab.com` (self-hosted GitLab in progress)
+5. Visit `registry.uds-mil.us`, log in with the SSO account from step 3, and create an **Organization Access Token**. Store credentials in a password manager and add to CI as a secret (GitHub Actions) or masked variable (GitLab CI). These map to `registry_user_id` and `registry_password` on `publish:zarf-package`.
 
 ### DSOP (DevSecOps Pipeline)
 The mechanism that software must pass through to be evaluated for deployment into a DoD ATO'd environment. CAT + Chainloop + OLM together implement the DSOP as a continuous, cryptographically-anchored pipeline. Running the udm-common pipeline tasks does not require a running Kubernetes cluster — cluster knowledge is only needed for Zarf package development and testing, which is separate.
@@ -68,4 +69,4 @@ Optional parameter on `vouch:package` and `olm:setup`. Used solely to authentica
 The deployable artifact a consumer builds. Published to the UDS Army registry after vouching.
 
 ### Registry
-`registry.uds-mil.us` — the UDS Army OCI registry where vouched Zarf packages are published. Consumers self-serve credentials via the registry UI.
+`registry.uds-mil.us` — the UDS Army OCI registry where vouched Zarf packages are published. Login uses the same SSO account from `sso.uds-mil.us`. Consumers self-serve registry credentials via the registry UI as either an **Organization Access Token** (recommended for CI — created by an org admin, shared via password manager, added as a CI secret or masked variable) or a **Personal Access Token** (per-user, recommended for local testing). Despite the "token" label, both types are dynamically generated username/password credential pairs, not API keys. Creating either type produces a ready-to-run `zarf tools registry login` command.
