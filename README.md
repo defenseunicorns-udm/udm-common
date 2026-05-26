@@ -297,6 +297,24 @@ Python, Go, TypeScript, and monorepos.
 
 Use the same `includes` block from [Quickstart](#quickstart) in your repo's `tasks.yaml`.
 
+## AI-Assisted Onboarding (Claude Code)
+
+A Claude Code skill is included to generate your `tasks.yaml` and CI workflow file interactively.
+
+Copy the skill into your repo, then invoke it:
+
+```shell
+cp <path-to-udm-common>/.claude/skills/udm-onboard.md .claude/skills/udm-onboard.md
+```
+
+Then in Claude Code inside your repo:
+
+```
+/udm-onboard
+```
+
+The skill asks for your CI provider, language, org name, and monorepo layout, then writes or diffs the files you need. It does not require completing onboarding first — prerequisites are noted in the output.
+
 ## Examples
 
 See the [`examples/`](examples/) directory for copy-paste starting points:
