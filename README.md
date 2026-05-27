@@ -16,6 +16,54 @@ the UDS Army registry.
 | `publish` | `zarf-package` | Publishes a vouched Zarf package to the UDS registry |
 | `olm` | `setup` | OLM CLI setup |
 
+## Pipeline Overview
+
+Every package goes through these stages in order:
+
+1. **Lint** — `attest:lint` runs your repo's `lint` task and signs the result
+2. **Scan** — `scan:security` runs Gitleaks (secrets) and OpenGrep (SAST) and signs each result
+3. **Build + Vouch** — `vouch:package` builds the Zarf package, then submits all signed attestations to OLM/CAT
+4. **Publish** — `publish:zarf-package` pushes the package to the UDS Army registry
+
+> **Tooling glossary**
+> - **Witness** — signs each pipeline step, producing `.json` attestation files as evidence
+> - **Sigstore / Fulcio** — keyless signing via OIDC (e.g. GitHub Actions token — no stored key needed in CI)
+> - **OLM / CAT** — UDS Army compliance tracking; receives signed attestations during `vouch`
+
+## Prerequisites
+
+### UDS CLI
+
+All tasks require the [UDS CLI](https://github.com/defenseunicorns/uds-cli). Install it before running any `uds run` command.
+
+**GitHub Actions** — use the bundled setup action (already included in [`examples/ci-example.yaml`](examples/ci-example.yaml)):
+
+```yaml
+- uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@9aaad66b21c7637b5be3d6aafdb21c9e7ff1df2a # v0.10.3
+```
+
+**Other CI / local** — download the binary directly:
+
+```shell
+# renovate: datasource=github-releases depName=defenseunicorns/uds-cli
+UDS_VERSION=v0.31.0
+curl --retry-all-errors --retry 5 -fSL \
+  "https://github.com/defenseunicorns/uds-cli/releases/download/${UDS_VERSION}/uds-cli_${UDS_VERSION}_Linux_amd64" \
+  -o uds
+chmod +x uds
+sudo mv uds /usr/local/bin/uds
+```
+
+See [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) for a complete GitLab install snippet with caching.
+
+> **Keep versions current:** use [Renovate](https://docs.renovatebot.com/) to auto-update both the UDS CLI version pin above and your `udm-common` task include URLs. The inline `# renovate:` comments in the snippets above and in `examples/` are already wired for Renovate's GitHub Releases datasource.
+
+### Lint task
+
+**You must define a `lint` task** in your repo's `tasks.yaml` before using `attest:lint` — `attest:lint`
+calls it. See [`examples/tasks.yaml`](examples/tasks.yaml) for patterns covering Python, Go, TypeScript,
+and monorepos.
+
 ## Quickstart
 
 Include task namespaces from this repo in your `tasks.yaml`:
@@ -35,6 +83,8 @@ includes:
 See [`examples/tasks.yaml`](examples/tasks.yaml) for a full starting point.
 
 ### Minimal CI workflow (GitHub Actions)
+
+> **Note:** `vouch:package` calls `build:zarf-package` automatically.
 
 ```yaml
 jobs:
@@ -123,8 +173,12 @@ If your build requires a custom script (pre-processing, non-standard flags, mult
 uds run build:zarf-package \
     --with build_command="scripts/build.sh"
 ```
+## Required Secrets
 
-The custom command runs under Witness attestation — the resulting `zarf-create-witness.json` is identical in structure to a standard build. Scripts with complex quoting should be placed in a file and called by path rather than passed inline.
+| Secret | Used By | Description |
+|--------|---------|-------------|
+| `REGISTRY_USER_ID` | `publish:zarf-package` | Username for publishing to `registry.uds-mil.us` |
+| `REGISTRY_PASSWORD` | `publish:zarf-package` | Password for publishing to `registry.uds-mil.us` |
 
 ## Run Locally
 
@@ -136,20 +190,23 @@ The custom command runs under Witness attestation — the resulting `zarf-create
 The full local flow needs a Witness key pair for task attestations. `setup:witness` will download
 the required CLIs and place them on your `PATH`.
 
+Use the UDS CLI to execute tasks locally before you push or run CI.
+The full local flow needs a Witness key pair for task attestations. `setup:witness` will download the required CLIs and place them on your PATH.
+
 ```shell
 uds run setup:witness
 openssl genpkey -algorithm ed25519 -outform PEM -out witness-key.pem
 openssl pkey -in witness-key.pem -pubout > witness-pub.pem
 ```
 
-Wrap your repo's `lint` task with Witness:
+**Wrap your repo's `lint` task with Witness:**
 
 ```shell
 uds run attest:lint \
   --with witness_key_path="$(pwd)/witness-key.pem"
 ```
 
-Run Gitleaks and OpenGrep SAST under Witness attestation:
+**Run Gitleaks and OpenGrep SAST under Witness attestation:**
 
 ```shell
 uds run scan:security \
@@ -193,6 +250,19 @@ publishes the most recent `zarf-package-*.tar.zst` in the current directory. For
 local runs, pass `zarf_package` explicitly when old package artifacts may still
 be present.
 
+## Security Scan Scope
+
+`scan:gitleaks` scans tracked Git commits in the current package iteration, not
+the live working directory. It compares `HEAD` to the local `origin/main` or
+`origin/master` default branch ref and scopes the scan to `gitleaks_scan_path`.
+This keeps local-only files such as `.env` files, generated SARIF reports, and
+Witness attestations out of the scan while still letting monorepos scan only the
+service that is being packaged.
+
+For monorepos, pass the same service path to `gitleaks_scan_path`,
+`opengrep_scan_path`, and `zarf_path` so the evidence matches the package being
+cut.
+
 ## CI Provider Configuration
 
 By default, Sigstore signing uses `https://token.actions.githubusercontent.com` as the Fulcio OIDC issuer, which is correct for GitHub Actions. To use Sigstore attestation from another CI provider, pass `fulcio_oidc_issuer` with the provider's OIDC issuer URL.
@@ -232,13 +302,6 @@ scan:
 `$CI_SERVER_URL` is a built-in GitLab variable that resolves to the GitLab instance URL, which is the OIDC issuer for GitLab's Sigstore integration. `OLM_ID_TOKEN` is a variable you define in GitLab that requests an OIDC token for your OLM registry — pass it to `vouch:package` as `olm_identity_token`.
 
 See [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) for a complete annotated pipeline.
-
-## Required Secrets
-
-| Secret | Used By | Description |
-|--------|---------|-------------|
-| `REGISTRY_USER_ID` | `publish:zarf-package` | Username for publishing to `registry.uds-mil.us` |
-| `REGISTRY_PASSWORD` | `publish:zarf-package` | Password for publishing to `registry.uds-mil.us` |
 
 ## Lint Task
 

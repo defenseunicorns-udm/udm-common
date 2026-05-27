@@ -1,5 +1,9 @@
 # Example UDS tasks file for use with udm-common shared workflows.
 #
+# PREREQUISITE: UDS CLI must be installed before running any `uds run` command.
+# GitHub Actions: use defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup
+# Other CI/local: see the Prerequisites section in README.md for install instructions.
+#
 # The CI workflow calls `uds run attest:lint`, which wraps your `lint` task
 # with Witness attestation. You MUST define a task named `lint` in your repo's
 # tasks.yaml — attest:lint calls it. The task must exit non-zero on failures.
