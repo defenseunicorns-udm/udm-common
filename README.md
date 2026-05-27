@@ -175,6 +175,8 @@ uds run vouch:package \
   --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json"
 ```
 
+When `zarf_package` is unset, `vouch:package` uses the most recent `zarf-package-*.tar.zst` in the current directory. Pass `--with zarf_package=<path>` explicitly for local runs where old artifacts may be present, or when a repo produces multiple packages.
+
 Publish the Zarf package to the registry:
 
 ```shell
