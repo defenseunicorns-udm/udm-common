@@ -11,6 +11,9 @@ tasks:
       witness_workingdir:
         description: Directory for Witness to run the attested command from.
         default: ""
+      enable_sigstore:
+        description: Sign attestations with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions). Set to false for local runs without OIDC.
+        default: "true"
       fulcio_oidc_issuer:
         description: OIDC issuer URL for Sigstore/Fulcio signing. Override for non-GitHub CI providers (e.g. https://gitlab.com).
         default: https://token.actions.githubusercontent.com
@@ -25,19 +28,23 @@ tasks:
 
           WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
           WITNESS_WORKINGDIR="${{ .inputs.witness_workingdir }}"
+          ENABLE_SIGSTORE="${{ .inputs.enable_sigstore }}"
           OUTPUT_DIR="$(pwd)"
           LINT_WITNESS="${OUTPUT_DIR}/lint-witness.json"
           rm -f "$LINT_WITNESS"
 
           WITNESS_ARGS=(-a=environment -a=git)
+          SHOULD_WITNESS="false"
 
           if [ -n "$WITNESS_KEY_PATH" ]; then
+            SHOULD_WITNESS="true"
             if [ ! -f "$WITNESS_KEY_PATH" ]; then
               echo "Witness key file does not exist: $WITNESS_KEY_PATH"
               exit 1
             fi
             WITNESS_ARGS+=(--signer-file-key-path "$WITNESS_KEY_PATH")
-          else
+          elif [ "$ENABLE_SIGSTORE" = "true" ]; then
+            SHOULD_WITNESS="true"
             WITNESS_ARGS+=(
               --signer-fulcio-url=https://fulcio.sigstore.dev
               --signer-fulcio-oidc-client-id=sigstore
@@ -52,5 +59,10 @@ tasks:
             WITNESS_ARGS+=(--workingdir "$WITNESS_WORKINGDIR")
           fi
 
-          uds run setup:witness
-          witness run "${WITNESS_ARGS[@]}" -s=lint --outfile="$LINT_WITNESS" -- uds run lint
+          if [ "$SHOULD_WITNESS" = "true" ]; then
+            uds run setup:witness
+            witness run "${WITNESS_ARGS[@]}" -s=lint --outfile="$LINT_WITNESS" -- uds run lint
+          else
+            echo "No signing key or Sigstore enabled. Running lint without Witness attestation."
+            uds run lint
+          fi

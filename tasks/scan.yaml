@@ -109,6 +109,9 @@ tasks:
       witness_workingdir:
         description: Directory for Witness to run the attested command from. Use the caller repository workspace in composite actions so the git attestor sees a real checkout.
         default: ""
+      enable_sigstore:
+        description: Sign the attestation with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions). Set to false for local runs without OIDC.
+        default: "true"
       fulcio_oidc_issuer:
         description: OIDC issuer URL for Sigstore/Fulcio signing. Override for non-GitHub CI providers (e.g. https://gitlab.com).
         default: https://token.actions.githubusercontent.com
@@ -124,6 +127,7 @@ tasks:
           GITLEAKS_SCAN_PATH="${{ .inputs.gitleaks_scan_path }}"
           WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
           WITNESS_WORKINGDIR="${{ .inputs.witness_workingdir }}"
+          ENABLE_SIGSTORE="${{ .inputs.enable_sigstore }}"
           FULCIO_OIDC_ISSUER="${{ .inputs.fulcio_oidc_issuer }}"
           OUTPUT_DIR="$(pwd)"
           GITLEAKS_SARIF="${OUTPUT_DIR}/gitleaks.sarif.json"
@@ -187,14 +191,17 @@ tasks:
           rm -f "$GITLEAKS_WITNESS"
 
           WITNESS_ARGS=(-a=environment -a=git)
+          SHOULD_WITNESS="false"
 
           if [ -n "$WITNESS_KEY_PATH" ]; then
+            SHOULD_WITNESS="true"
             if [ ! -f "$WITNESS_KEY_PATH" ]; then
               echo "Witness key file does not exist: $WITNESS_KEY_PATH"
               exit 1
             fi
             WITNESS_ARGS+=(--signer-file-key-path "$WITNESS_KEY_PATH")
-          else
+          elif [ "$ENABLE_SIGSTORE" = "true" ]; then
+            SHOULD_WITNESS="true"
             WITNESS_ARGS+=(
               --signer-fulcio-url=https://fulcio.sigstore.dev
               --signer-fulcio-oidc-client-id=sigstore
@@ -209,8 +216,13 @@ tasks:
             WITNESS_ARGS+=(--workingdir "$WITNESS_WORKINGDIR")
           fi
 
-          uds run setup:witness
-          witness run "${WITNESS_ARGS[@]}" -s=gitleaks --outfile="$GITLEAKS_WITNESS" -- "${GITLEAKS_CMD[@]}"
+          if [ "$SHOULD_WITNESS" = "true" ]; then
+            uds run setup:witness
+            witness run "${WITNESS_ARGS[@]}" -s=gitleaks --outfile="$GITLEAKS_WITNESS" -- "${GITLEAKS_CMD[@]}"
+          else
+            echo "No signing key or Sigstore enabled. Running Gitleaks without Witness attestation."
+            "${GITLEAKS_CMD[@]}"
+          fi
 
   - name: opengrep
     description: Run OpenGrep SAST scan with Witness attestation (Linux x86_64 only)
@@ -227,6 +239,9 @@ tasks:
       witness_workingdir:
         description: Directory for Witness to run the attested command from. Use the caller repository workspace in composite actions so the git attestor sees a real checkout.
         default: ""
+      enable_sigstore:
+        description: Sign the attestation with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions). Set to false for local runs without OIDC.
+        default: "false"
       fulcio_oidc_issuer:
         description: OIDC issuer URL for Sigstore/Fulcio signing. Override for non-GitHub CI providers (e.g. https://gitlab.com).
         default: https://token.actions.githubusercontent.com
@@ -249,6 +264,7 @@ tasks:
           OPENGREP_SCAN_PATH="${{ .inputs.opengrep_scan_path }}"
           WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
           WITNESS_WORKINGDIR="${{ .inputs.witness_workingdir }}"
+          ENABLE_SIGSTORE="${{ .inputs.enable_sigstore }}"
           FULCIO_OIDC_ISSUER="${{ .inputs.fulcio_oidc_issuer }}"
           OUTPUT_DIR="$(pwd)"
           OPENGREP_SARIF="${OUTPUT_DIR}/opengrep.sarif.json"
@@ -261,14 +277,17 @@ tasks:
           rm -f "$OPENGREP_WITNESS"
 
           WITNESS_ARGS=(-a=environment -a=git)
+          SHOULD_WITNESS="false"
 
           if [ -n "$WITNESS_KEY_PATH" ]; then
+            SHOULD_WITNESS="true"
             if [ ! -f "$WITNESS_KEY_PATH" ]; then
               echo "Witness key file does not exist: $WITNESS_KEY_PATH"
               exit 1
             fi
             WITNESS_ARGS+=(--signer-file-key-path "$WITNESS_KEY_PATH")
-          else
+          elif [ "$ENABLE_SIGSTORE" = "true" ]; then
+            SHOULD_WITNESS="true"
             WITNESS_ARGS+=(
               --signer-fulcio-url=https://fulcio.sigstore.dev
               --signer-fulcio-oidc-client-id=sigstore
@@ -283,8 +302,13 @@ tasks:
             WITNESS_ARGS+=(--workingdir "$WITNESS_WORKINGDIR")
           fi
 
-          uds run setup:witness
-          witness run "${WITNESS_ARGS[@]}" -s=opengrep --outfile="$OPENGREP_WITNESS" -- "${OPENGREP_CMD[@]}"
+          if [ "$SHOULD_WITNESS" = "true" ]; then
+            uds run setup:witness
+            witness run "${WITNESS_ARGS[@]}" -s=opengrep --outfile="$OPENGREP_WITNESS" -- "${OPENGREP_CMD[@]}"
+          else
+            echo "No signing key or Sigstore enabled. Running OpenGrep without Witness attestation."
+            "${OPENGREP_CMD[@]}"
+          fi
 
   - name: security
     description: Run Gitleaks and OpenGrep security scans with Witness attestation
@@ -307,6 +331,9 @@ tasks:
       witness_workingdir:
         description: Directory for Witness to run the attested command from.
         default: ""
+      enable_sigstore:
+        description: Sign attestations with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions). Set to false for local runs without OIDC.
+        default: "true"
       enable_archivista:
         description: Upload attestations to Archivista.
         default: "false"
@@ -331,12 +358,14 @@ tasks:
           OPENGREP_SCAN_PATH="${{ .inputs.opengrep_scan_path }}"
           WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
           WITNESS_WORKINGDIR="${{ .inputs.witness_workingdir }}"
+          ENABLE_SIGSTORE="${{ .inputs.enable_sigstore }}"
           FULCIO_OIDC_ISSUER="${{ .inputs.fulcio_oidc_issuer }}"
           RUN_OPENGREP="${{ .inputs.run_opengrep }}"
 
           GITLEAKS_OPTS=(
             --with gitleaks_version="$GITLEAKS_VERSION"
             --with gitleaks_scan_path="$GITLEAKS_SCAN_PATH"
+            --with enable_sigstore="$ENABLE_SIGSTORE"
             --with fulcio_oidc_issuer="$FULCIO_OIDC_ISSUER"
           )
           [ -n "$WITNESS_KEY_PATH" ] && GITLEAKS_OPTS+=(--with witness_key_path="$WITNESS_KEY_PATH")
@@ -348,6 +377,7 @@ tasks:
             OPENGREP_OPTS=(
               --with opengrep_version="$OPENGREP_VERSION"
               --with opengrep_scan_path="$OPENGREP_SCAN_PATH"
+              --with enable_sigstore="$ENABLE_SIGSTORE"
               --with fulcio_oidc_issuer="$FULCIO_OIDC_ISSUER"
             )
             [ -n "$WITNESS_KEY_PATH" ] && OPENGREP_OPTS+=(--with witness_key_path="$WITNESS_KEY_PATH")

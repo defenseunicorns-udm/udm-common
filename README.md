@@ -214,14 +214,16 @@ scan:
 ```
 
 ```yaml
-# tasks.yaml — pass fulcio_oidc_issuer through to vouch
-- task: vouch:package
+# tasks.yaml — build then vouch as separate steps
+- task: build:zarf-package
   with:
     fulcio_oidc_issuer: "$CI_SERVER_URL"
+- task: vouch:package
+  with:
     olm_identity_token: "$OLM_ID_TOKEN"
     olm_cat: <cat-domain>
     olm_org: <your-org-name>
-    attestations: lint-witness.json,gitleaks-witness.json,opengrep-witness.json
+    attestations: lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json
     sarif_files: gitleaks.sarif.json,opengrep.sarif.json
 ```
 

@@ -140,22 +140,20 @@ publish:
 
   script:
 
-    # Project-specific:
-    # - `uds run build-images` is an enxo/oootp build task.
-    # - Replace build_command with your package build command, or omit it to
-    #   let vouch:package use the default `uds zarf package create` behavior.
+    # Project-specific: `uds run build-images` is an enxo/oootp build task.
+    # Replace build_command with your package build command, or omit it to use
+    # the default `uds zarf package create` behavior.
     - |
       uds run build:zarf-package \
-          --with fulcio_oidc_issuer="$CI_SERVER_URL"
+        --with fulcio_oidc_issuer="$CI_SERVER_URL" \
+        --with build_command="uds run build-images"
     - |
       uds run vouch:package \
         --with olm_cat="$OLM_CAT" \
         --with olm_org="$OLM_ORG" \
-        --with fulcio_oidc_issuer="$CI_SERVER_URL" \
         --with olm_identity_token="$OLM_ID_TOKEN" \
-        --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json" \
-        --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
-        --with build_command="uds run build-images"
+        --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
+        --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json"
 
     # Generic: publishing is independent from CAT/vouch compliance evidence.
     # Configure REGISTRY_USER_ID and REGISTRY_PASSWORD as masked GitLab CI/CD
