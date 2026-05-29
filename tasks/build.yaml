@@ -12,13 +12,13 @@ tasks:
         description: Target architecture for the Zarf package
         default: amd64
       witness_key_path:
-        description: Path to a local signing key for Witness. Use for local runs when enable_sigstore=false. Leave empty in CI (Sigstore is used instead).
+        description: Path to a local signing key for Witness. Leave empty to use Sigstore browser auth instead.
         default: ""
       witness_workingdir:
         description: Directory for Witness to run the attested command from. Use the caller repository workspace in composite actions so the git attestor sees a real checkout.
         default: ""
       enable_sigstore:
-        description: Sign the attestation with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions).
+        description: Sign the build attestation with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions). Set to false for local runs without OIDC.
         default: "true"
       enable_archivista:
         description: Upload the attestation to Archivista.
@@ -72,8 +72,8 @@ tasks:
           fi
           rm -f "$ZARF_CREATE_WITNESS"
 
-          SHOULD_WITNESS="false"
           WITNESS_ARGS=(-a=environment -a=git)
+          SHOULD_WITNESS="false"
           if [ -n "$WITNESS_KEY_PATH" ]; then
             SHOULD_WITNESS="true"
             if [ ! -f "$WITNESS_KEY_PATH" ]; then

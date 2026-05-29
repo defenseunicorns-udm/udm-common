@@ -3,10 +3,13 @@
 tasks:
 
   - name: package
-    description: Build a Zarf package with Witness attestation and vouch for it via OLM
+    description: Vouch for a signed Zarf package via OLM, pushing attestations to CAT
     inputs:
+      zarf_package:
+        description: Path to the Zarf package .tar.zst to vouch. If unset, uses the most recent zarf-package-*.tar.zst in the current directory.
+        default: ""
       attestations:
-        description: Comma-separated list of additional witness JSON attestation files to include
+        description: Comma-separated list of Witness JSON attestation files to include
         default: ""
       sarif_files:
         description: Comma-separated list of SARIF files to include as evidence
@@ -17,45 +20,14 @@ tasks:
       olm_org:
         description: OLM organization name
         default: ""
-      github_token:
-        description: GitHub token for GHCR authentication. Pass secrets.GITHUB_TOKEN in CI. Leave empty locally — the package is publicly accessible.
-        default: ""
-      zarf_path:
-        description: Path to the directory containing zarf.yaml
-        default: .
-      architecture:
-        description: Target architecture for the Zarf package
-        default: amd64
-      zarf_flavor:
-        description: Optional flavor to pass to zarf package create. If not set, no flavor will be used.
-        required: false
+      olm_identity_token:
+        description: OIDC identity token for OLM CAT authentication. In GitLab CI, set via id_tokens with aud=cat and pass $OLM_ID_TOKEN. Leave empty for interactive device flow (local use).
         default: ""
       test_directory:
         description: Path to the test directory to pass to olm vouch. Leave empty to skip.
         default: tests
-      witness_key_path:
-        description: Path to a local signing key for Witness. Use for local runs without OIDC. Leave empty in CI (Sigstore is used instead).
-        default: ""
-      witness_workingdir:
-        description: Directory for Witness to run the attested command from. Use the caller repository workspace in composite actions so the git attestor sees a real checkout.
-        default: ""
-      enable_sigstore:
-        description: Sign the build attestation with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions).
-        default: "true"
-      enable_archivista:
-        description: Upload the build attestation to Archivista.
-        default: "false"
-      fulcio_oidc_issuer:
-        description: OIDC issuer URL for Sigstore/Fulcio signing. Override for non-GitHub CI providers (e.g. https://gitlab.com).
-        default: https://token.actions.githubusercontent.com
-      build_command:
-        description: Optional. Custom build command to run under Witness attestation instead of the default 'uds zarf package create'. When set, zarf_path and architecture inputs are ignored.
-        default: ""
-      olm_identity_token:
-        description: OIDC identity token for OLM CAT authentication. In GitLab CI, set via id_tokens with aud=cat and pass $OLM_ID_TOKEN. Leave empty for interactive device flow (local use).
-        default: ""
     actions:
-      - description: Install tools, build Zarf package, and vouch
+      - description: Vouch for Zarf package via OLM
         shell:
           linux: bash
           darwin: bash
@@ -68,42 +40,30 @@ tasks:
           TEST_DIRECTORY="${{ .inputs.test_directory }}"
           OLM_CAT="${{ .inputs.olm_cat }}"
           OLM_ORG="${{ .inputs.olm_org }}"
-          ZARF_FLAVOR="${{ .inputs.zarf_flavor }}"
 
-          BUILD_ARGS=(
-            --with zarf_path="${{ .inputs.zarf_path }}"
-            --with architecture="${{ .inputs.architecture }}"
-            --with witness_key_path="${{ .inputs.witness_key_path }}"
-            --with witness_workingdir="${{ .inputs.witness_workingdir }}"
-            --with enable_sigstore="${{ .inputs.enable_sigstore }}"
-            --with enable_archivista="${{ .inputs.enable_archivista }}"
-            --with fulcio_oidc_issuer="${{ .inputs.fulcio_oidc_issuer }}"
-            --with build_command="${{ .inputs.build_command }}"
-          )
-          if [ -n "$ZARF_FLAVOR" ]; then
-            BUILD_ARGS+=(--with zarf_flavor="$ZARF_FLAVOR")
-          fi
-
-          uds run build:zarf-package "${BUILD_ARGS[@]}"
-
-          PACKAGE=$(find . -maxdepth 1 -name "zarf-package-*.tar.zst" -type f | head -n 1)
+          PACKAGE="${{ .inputs.zarf_package }}"
           if [ -z "$PACKAGE" ]; then
-            echo "No zarf-package-*.tar.zst file found after build."
+            while IFS= read -r p; do
+              if [ -z "$PACKAGE" ] || [ "$p" -nt "$PACKAGE" ]; then
+                PACKAGE="$p"
+              fi
+            done < <(find . -maxdepth 1 -name "zarf-package-*.tar.zst" -type f)
+          fi
+          if [ -z "$PACKAGE" ]; then
+            echo "No zarf-package-*.tar.zst file found."
             exit 1
           fi
+          if [ ! -f "$PACKAGE" ]; then
+            echo "Zarf package not found: $PACKAGE"
+            exit 1
+          fi
+
           if [ -z "$OLM_CAT" ]; then
             echo "No OLM_CAT configured. Skipping OLM vouch for local run."
             exit 0
           fi
 
-          uds run olm:setup \
-            --with github_token="${{ .inputs.github_token }}"
-
           ATTESTATION_FILES=()
-          if [ -s zarf-create-witness.json ]; then
-            ATTESTATION_FILES+=(zarf-create-witness.json)
-          fi
-
           if [ -n "$ATTESTATIONS" ]; then
             IFS=',' read -ra PROVIDED_ATTESTATIONS <<< "$ATTESTATIONS"
             for attestation in "${PROVIDED_ATTESTATIONS[@]}"; do
@@ -160,8 +120,11 @@ tasks:
             ALL_ATTESTATIONS=$(IFS=,; echo "${ATTESTATION_FILES[*]}")
             OLM_ARGS+=(--attestations "$ALL_ATTESTATIONS")
           else
-            echo "No Witness attestations were produced or provided; running OLM vouch without --attestations."
+            echo "No Witness attestations provided; running OLM vouch without --attestations."
           fi
+          echo "====== Installing OLM CLI plugin ======"
+          uds run olm:setup
+          echo "====== Running OLM vouch $(./olm version) ======"
 
           ./olm vouch "$PACKAGE" \
             "${OLM_ARGS[@]}" \

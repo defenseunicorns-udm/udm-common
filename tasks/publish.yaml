@@ -17,6 +17,9 @@ tasks:
       registry_password:
         description: Registry password for publishing
         default: ""
+      zarf_package:
+        description: Path to the Zarf package tarball to publish. If unset, the most recent zarf-package-*.tar.zst in the current directory is used.
+        default: ""
       dry_run:
         description: Skip publishing and exit successfully. Set to 'true' when no registry is available (e.g. local runs).
         default: "false"
@@ -33,9 +36,16 @@ tasks:
           REGISTRY_ORG="${{ .inputs.registry_org }}"
           REGISTRY_USER_ID="${{ .inputs.registry_user_id }}"
           REGISTRY_PASSWORD="${{ .inputs.registry_password }}"
+          PACKAGE="${{ .inputs.zarf_package }}"
           if [ "${{ .inputs.dry_run }}" = "true" ]; then
             echo "Dry run: skipping Zarf package publish."
             exit 0
+          fi
+
+          if [ -z "$REGISTRY_ORG" ]; then
+            echo "registry_org is required for publish:zarf-package."
+            echo "Example: uds run publish:zarf-package --with registry_org=<your-org>"
+            exit 1
           fi
 
           if [ -n "$REGISTRY_USER_ID" ] && [ -n "$REGISTRY_PASSWORD" ]; then
@@ -45,15 +55,31 @@ tasks:
               "$REGISTRY"
           fi
 
-          PACKAGE=$(find . -maxdepth 1 -name "zarf-package-*.tar.zst" -type f | head -n 1)
           if [ -z "$PACKAGE" ]; then
-            echo "No zarf-package-*.tar.zst file found to publish."
+            PACKAGES=()
+            latest_package=""
+            while IFS= read -r package; do
+              PACKAGES+=("$package")
+              if [ -z "$latest_package" ] || [ "$package" -nt "$latest_package" ]; then
+                latest_package="$package"
+              fi
+            done < <(find . -maxdepth 1 -name "zarf-package-*.tar.zst" -type f)
+            if [ "${#PACKAGES[@]}" -eq 0 ]; then
+              echo "No zarf-package-*.tar.zst file found to publish."
+              exit 1
+            fi
+            if [ "${#PACKAGES[@]}" -gt 1 ]; then
+              echo "Multiple Zarf packages found; publishing most recent. Pass --with zarf_package=<path> to choose explicitly."
+              printf '  %s\n' "${PACKAGES[@]}"
+            fi
+            PACKAGE="$latest_package"
+          fi
+
+          if [ ! -f "$PACKAGE" ]; then
+            echo "Zarf package not found: $PACKAGE"
             exit 1
           fi
 
-          PUBLISH_DESTINATION="oci://${REGISTRY}"
-          if [ -n "$REGISTRY_ORG" ]; then
-            PUBLISH_DESTINATION="${PUBLISH_DESTINATION}/${REGISTRY_ORG}"
-          fi
+          PUBLISH_DESTINATION="oci://${REGISTRY}/${REGISTRY_ORG}"
           uds zarf package publish "$PACKAGE" \
             "$PUBLISH_DESTINATION"

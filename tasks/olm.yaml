@@ -19,6 +19,13 @@ tasks:
           set -euo pipefail
           export PATH="$HOME/.local/bin:$PATH"
 
+          if [ -f ./olm ]; then
+            chmod +x ./olm
+            echo "OLM CLI already exists at ./olm; skipping download."
+            ./olm version || true
+            exit 0
+          fi
+
           # Detect OS
           OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
           case "$OS" in

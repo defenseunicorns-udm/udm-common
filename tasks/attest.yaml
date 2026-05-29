@@ -12,7 +12,7 @@ tasks:
         description: Directory for Witness to run the attested command from.
         default: ""
       enable_sigstore:
-        description: Sign attestations with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions).
+        description: Sign attestations with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions). Set to false for local runs without OIDC.
         default: "true"
       fulcio_oidc_issuer:
         description: OIDC issuer URL for Sigstore/Fulcio signing. Override for non-GitHub CI providers (e.g. https://gitlab.com).

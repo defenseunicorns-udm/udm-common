@@ -110,7 +110,7 @@ tasks:
         description: Directory for Witness to run the attested command from. Use the caller repository workspace in composite actions so the git attestor sees a real checkout.
         default: ""
       enable_sigstore:
-        description: Sign the attestation with Sigstore/Fulcio.
+        description: Sign the attestation with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions). Set to false for local runs without OIDC.
         default: "true"
       fulcio_oidc_issuer:
         description: OIDC issuer URL for Sigstore/Fulcio signing. Override for non-GitHub CI providers (e.g. https://gitlab.com).
@@ -240,7 +240,7 @@ tasks:
         description: Directory for Witness to run the attested command from. Use the caller repository workspace in composite actions so the git attestor sees a real checkout.
         default: ""
       enable_sigstore:
-        description: Sign the attestation with Sigstore/Fulcio.
+        description: Sign the attestation with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions). Set to false for local runs without OIDC.
         default: "false"
       fulcio_oidc_issuer:
         description: OIDC issuer URL for Sigstore/Fulcio signing. Override for non-GitHub CI providers (e.g. https://gitlab.com).
@@ -317,20 +317,28 @@ tasks:
         description: Gitleaks version to install
         default: 8.30.1
       gitleaks_scan_path:
+        description: Directory for Gitleaks to scan.
         default: .
       opengrep_version:
+        description: OpenGrep version to install.
         default: v1.19.0
       opengrep_scan_path:
+        description: Path to scan with OpenGrep.
         default: .
       witness_key_path:
+        description: Path to a local signing key for Witness.
         default: ""
       witness_workingdir:
+        description: Directory for Witness to run the attested command from.
         default: ""
       enable_sigstore:
+        description: Sign attestations with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions). Set to false for local runs without OIDC.
         default: "true"
       enable_archivista:
+        description: Upload attestations to Archivista.
         default: "false"
       run_opengrep:
+        description: Whether to run OpenGrep SAST. Set to false to skip.
         default: "true"
       fulcio_oidc_issuer:
         description: OIDC issuer URL for Sigstore/Fulcio signing. Override for non-GitHub CI providers (e.g. https://gitlab.com).
