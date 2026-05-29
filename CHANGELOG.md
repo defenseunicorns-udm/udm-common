@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.0](https://github.com/defenseunicorns-udm/udm-common/compare/v0.10.3...v0.11.0) (2026-05-29)
+
+
+### Features
+
+* split build from vouch ([#94](https://github.com/defenseunicorns-udm/udm-common/issues/94)) ([dfdedc3](https://github.com/defenseunicorns-udm/udm-common/commit/dfdedc3370bbe13dc387536fe617299fa1612634))
+
 ## [0.10.3](https://github.com/defenseunicorns-udm/udm-common/compare/v0.10.2...v0.10.3) (2026-05-19)
 
 
