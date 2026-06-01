@@ -265,41 +265,53 @@ cut.
 
 ## CI Provider Configuration
 
-By default, Sigstore signing uses `https://token.actions.githubusercontent.com` as the Fulcio OIDC issuer, which is correct for GitHub Actions. To use Sigstore attestation from another CI provider, pass `fulcio_oidc_issuer` with the provider's OIDC issuer URL.
+All Witness attestation signing uses `fulcio.uds-mil.us` via a CAT-brokered token. Before any Witness-attested step, call `olm:generate-fulcio-token` to mint a short-lived JWT and write it to `.fulcio-token`. The attestation tasks (`attest:lint`, `scan:security`, `scan:gitleaks`, `scan:opengrep`, `build:zarf-package`) read `.fulcio-token` automatically when it is present.
 
-Supported by: `attest:lint`, `scan:security`, `scan:gitleaks`, `scan:opengrep`, `build:zarf-package`, `vouch:package`.
+On **GitHub Actions**, OLM auto-detects the GitHub OIDC token — no extra configuration needed beyond `id-token: write` on the job.
 
-### Configuring Sigstore for GitLab CI
+### Configuring Fulcio signing for GitLab CI
 
-The snippets below show only the Sigstore-relevant configuration — they are not a complete GitLab CI pipeline. GitLab requires OIDC tokens to be explicitly requested via `id_tokens`; without this, Sigstore signing will fail.
+GitLab requires OIDC tokens to be explicitly requested via `id_tokens`. Request a token with audience `cat` and pass it to `olm:generate-fulcio-token` as `olm_identity_token`. Each job that runs Witness-attested steps must generate its own token — `.fulcio-token` is gitignored and is not shared between jobs.
 
 ```yaml
-# .gitlab-ci.yml — Sigstore OIDC token request (add to any job that signs with Witness)
+# .gitlab-ci.yml — CAT token request (add to every job that signs with Witness)
 id_tokens:
-  SIGSTORE_ID_TOKEN:
-    aud: sigstore
+  OLM_ID_TOKEN:
+    aud: cat
 
-scan:
+ci:
   script:
-    - uds run scan:security \
-        --with fulcio_oidc_issuer="$CI_SERVER_URL"
+    # Generate Fulcio token before any Witness-attested step
+    - |
+      uds run olm:generate-fulcio-token \
+        --with olm_cat="cat-api.uds-mil.us" \
+        --with olm_org="<your-org>" \
+        --with olm_identity_token="$OLM_ID_TOKEN"
+    - uds run attest:lint
+    - uds run scan:security
 ```
 
 ```yaml
-# tasks.yaml — build then vouch as separate steps
-- task: build:zarf-package
-  with:
-    fulcio_oidc_issuer: "$CI_SERVER_URL"
-- task: vouch:package
-  with:
-    olm_identity_token: "$OLM_ID_TOKEN"
-    olm_cat: <cat-domain>
-    olm_org: <your-org-name>
-    attestations: lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json
-    sarif_files: gitleaks.sarif.json,opengrep.sarif.json
+# publish job — refresh token before build (builds can exceed token lifetime)
+publish:
+  id_tokens:
+    OLM_ID_TOKEN:
+      aud: cat
+  script:
+    - |
+      uds run olm:generate-fulcio-token \
+        --with olm_cat="cat-api.uds-mil.us" \
+        --with olm_org="<your-org>" \
+        --with olm_identity_token="$OLM_ID_TOKEN"
+    - uds run build:zarf-package
+    - |
+      uds run vouch:package \
+        --with olm_cat="cat-api.uds-mil.us" \
+        --with olm_org="<your-org>" \
+        --with olm_identity_token="$OLM_ID_TOKEN" \
+        --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
+        --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json"
 ```
-
-`$CI_SERVER_URL` is a built-in GitLab variable that resolves to the GitLab instance URL, which is the OIDC issuer for GitLab's Sigstore integration. `OLM_ID_TOKEN` is a variable you define in GitLab that requests an OIDC token for your OLM registry — pass it to `vouch:package` as `olm_identity_token`.
 
 See [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) for a complete annotated pipeline.
 

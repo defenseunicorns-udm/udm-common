@@ -9,6 +9,10 @@
 # package build; submits that evidence to CAT via `vouch:package`; then
 # optionally publishes the resulting Zarf package to an OCI registry.
 #
+# Signing uses fulcio.uds-mil.us via a CAT-brokered token (not fulcio.sigstore.dev).
+# Each job that runs Witness-attested steps must generate its own .fulcio-token
+# via olm:generate-fulcio-token before those steps run.
+#
 # Project-specific values from enxo/oootp are called out inline. Replace them
 # before copying this file into another project.
 
@@ -67,16 +71,11 @@ ci:
   # the language/runtime your project's lint/build tasks require.
   image: node:24
 
-  # Generic for GitLab Sigstore signing: request an OIDC token with audience
-  # `sigstore`, then pass the GitLab issuer to UDM Common tasks.
+  # Generic: request a CAT-audience OIDC token for Fulcio signing via olm:generate-fulcio-token.
+  # The token is written to .fulcio-token and read by Witness-attested tasks.
   id_tokens:
-    SIGSTORE_ID_TOKEN:
-      aud: sigstore
-
-  # Generic when package builds or scans need Docker.
-  services:
-    - name: docker:24-dind
-      command: --tls=false
+    OLM_ID_TOKEN:
+      aud: cat
 
   before_script:
     - *install-deps
@@ -86,17 +85,23 @@ ci:
     # because its lint task calls `npm run lint`, which calls Turbo.
     - npm ci
 
+    # Generic: generate a Fulcio signing token via CAT before any Witness-attested step.
+    # Token is written to .fulcio-token and read automatically by attest/scan/build tasks.
+    - |
+      uds run olm:generate-fulcio-token \
+        --with olm_cat="$OLM_CAT" \
+        --with olm_org="$OLM_ORG" \
+        --with olm_identity_token="$OLM_ID_TOKEN"
+
     # Generic: attest:lint wraps your repo's `lint` task with Witness.
     # Define that task in tasks.yaml; see examples/tasks.yaml.
-    - |
-      uds run attest:lint \
-        --with fulcio_oidc_issuer="$CI_SERVER_URL"
+    - uds run attest:lint
 
     # Project-specific: enxo/oootp scans apps/. Replace with your source path.
     - |
       uds run scan:security \
         --with opengrep_scan_path=apps/ \
-        --with fulcio_oidc_issuer="$CI_SERVER_URL"
+        --with gitleaks_scan_path=apps/
 
   # Generic: pass witness attestations and SARIF reports to the publish job so
   # vouch:package can submit the full evidence set to CAT.
@@ -117,14 +122,12 @@ publish:
   # Project-specific: enxo/oootp uses Node for its build command.
   image: node:24
 
-  # Generic:
-  # - OLM_ID_TOKEN authenticates to CAT/OLM using audience `cat`.
-  # - SIGSTORE_ID_TOKEN signs the package build attestation with Fulcio.
+  # Generic: OLM_ID_TOKEN authenticates to CAT to mint a Fulcio signing token
+  # and to authorize the vouch submission. Each job generates its own token —
+  # .fulcio-token from the ci job is not transferred (gitignored, separate runner).
   id_tokens:
     OLM_ID_TOKEN:
       aud: cat
-    SIGSTORE_ID_TOKEN:
-      aud: sigstore
 
   services:
     - name: docker:24-dind
@@ -140,13 +143,21 @@ publish:
 
   script:
 
+    # Generic: refresh the Fulcio token before the build step.
+    # build:zarf-package can exceed 30 minutes; token is minted fresh here.
+    - |
+      uds run olm:generate-fulcio-token \
+        --with olm_cat="$OLM_CAT" \
+        --with olm_org="$OLM_ORG" \
+        --with olm_identity_token="$OLM_ID_TOKEN"
+
     # Project-specific: `uds run build-images` is an enxo/oootp build task.
     # Replace build_command with your package build command, or omit it to use
     # the default `uds zarf package create` behavior.
     - |
       uds run build:zarf-package \
-        --with fulcio_oidc_issuer="$CI_SERVER_URL" \
         --with build_command="uds run build-images"
+
     - |
       uds run vouch:package \
         --with olm_cat="$OLM_CAT" \

@@ -18,14 +18,11 @@ tasks:
         description: Directory for Witness to run the attested command from. Use the caller repository workspace in composite actions so the git attestor sees a real checkout.
         default: ""
       enable_sigstore:
-        description: Sign the build attestation with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions). Set to false for local runs without OIDC.
+        description: Sign the build attestation with Fulcio. Set to false to skip Witness attestation entirely.
         default: "true"
       enable_archivista:
         description: Upload the attestation to Archivista.
         default: "false"
-      fulcio_oidc_issuer:
-        description: OIDC issuer URL for Sigstore/Fulcio signing. Override for non-GitHub CI providers (e.g. https://gitlab.com).
-        default: https://token.actions.githubusercontent.com
       zarf_flavor:
         description: Optional flavor to pass to zarf package create. If not set, no flavor will be used.
         required: false
@@ -84,13 +81,11 @@ tasks:
           elif [ "$ENABLE_SIGSTORE" = "true" ]; then
             SHOULD_WITNESS="true"
             WITNESS_ARGS+=(
-              --signer-fulcio-url=https://fulcio.sigstore.dev
-              --signer-fulcio-oidc-client-id=sigstore
-              --signer-fulcio-oidc-issuer="${{ .inputs.fulcio_oidc_issuer }}"
+              --signer-fulcio-url=https://fulcio.uds-mil.us
               --timestamp-servers=https://timestamp.sigstore.dev/api/v1/timestamp
             )
-            if [ -n "${SIGSTORE_ID_TOKEN:-}" ]; then
-              WITNESS_ARGS+=(--signer-fulcio-token "$SIGSTORE_ID_TOKEN")
+            if [ -f ".fulcio-token" ]; then
+              WITNESS_ARGS+=(--signer-fulcio-token "$(cat .fulcio-token)")
             fi
           fi
           if [ -n "$WITNESS_WORKINGDIR" ]; then
@@ -102,6 +97,6 @@ tasks:
             WITNESS_ARGS+=(--enable-archivista="$ENABLE_ARCHIVISTA")
             witness run "${WITNESS_ARGS[@]}" -s=zarf-create --outfile="$ZARF_CREATE_WITNESS" -- "${ZARF_CMD[@]}"
           else
-            echo "No signing key or Sigstore enabled. Building Zarf package without Witness attestation."
+            echo "Sigstore disabled. Building Zarf package without Witness attestation."
             "${ZARF_CMD[@]}"
           fi
