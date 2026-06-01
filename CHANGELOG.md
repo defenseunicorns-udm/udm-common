@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12.0](https://github.com/defenseunicorns-udm/udm-common/compare/v0.11.0...v0.12.0) (2026-06-01)
+
+
+### Features
+
+* replace sigstore.dev with CAT-brokered fulcio.uds-mil.us signing ([#101](https://github.com/defenseunicorns-udm/udm-common/issues/101)) ([6efdb80](https://github.com/defenseunicorns-udm/udm-common/commit/6efdb80c0876d5d16ad82bbd5c8c3403a95e8da7))
+
 ## [0.11.0](https://github.com/defenseunicorns-udm/udm-common/compare/v0.10.3...v0.11.0) (2026-05-29)
 
 
