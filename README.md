@@ -97,14 +97,17 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@9aaad66b21c7637b5be3d6aafdb21c9e7ff1df2a # v0.10.3
+      - run: |
+          uds run olm:generate-fulcio-token \
+            --with olm_cat="cat-api.uds-mil.us" \
+            --with olm_org="<your-org-name>" \
+            --with github_token="${{ secrets.GITHUB_TOKEN }}"
       - run: uds run attest:lint
       - run: |
           uds run scan:security \
             --with gitleaks_scan_path="." \
             --with opengrep_scan_path="."
-
       - run: uds run build:zarf-package
-
       - run: |
           uds run vouch:package \
             --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
@@ -334,6 +337,64 @@ includes:
   - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/setup.yaml
   - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/vouch.yaml
 ```
+
+## Migrating from v0.11.x to v0.12.x
+
+v0.12 replaces direct Sigstore OIDC signing (`fulcio.sigstore.dev`) with CAT-brokered signing (`fulcio.uds-mil.us`). All Witness attestations now use a single trust root managed by CAT.
+
+### Required changes for all consumers
+
+**1. Add `olm:` to your `tasks.yaml` includes** (if not already present):
+
+```yaml
+includes:
+  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.12.0/tasks/olm.yaml
+```
+
+**2. Remove `fulcio_oidc_issuer` from all task calls.** The parameter no longer exists. Remove any `--with fulcio_oidc_issuer=...` from `attest:lint`, `scan:security`, `scan:gitleaks`, `scan:opengrep`, and `build:zarf-package` calls.
+
+**3. Call `olm:generate-fulcio-token` before the first Witness-attested step in each CI job.** The token is short-lived — for long jobs (builds > 30 min), call it again before `build:zarf-package`.
+
+### GitHub Actions
+
+No provider-specific changes needed. `id-token: write` on the job is sufficient — OLM auto-detects the GitHub OIDC token.
+
+```yaml
+# Before first attested step
+- run: |
+    uds run olm:generate-fulcio-token \
+      --with olm_cat="cat-api.uds-mil.us" \
+      --with olm_org="<your-org>" \
+      --with github_token="${{ secrets.GITHUB_TOKEN }}"
+```
+
+### GitLab CI
+
+Replace the `SIGSTORE_ID_TOKEN` block with `OLM_ID_TOKEN`:
+
+```yaml
+# Before (v0.11.x)
+id_tokens:
+  SIGSTORE_ID_TOKEN:
+    aud: sigstore
+
+# After (v0.12.x)
+id_tokens:
+  OLM_ID_TOKEN:
+    aud: cat
+```
+
+Then generate the Fulcio token before attested steps in each job:
+
+```yaml
+- |
+  uds run olm:generate-fulcio-token \
+    --with olm_cat="cat-api.uds-mil.us" \
+    --with olm_org="<your-org>" \
+    --with olm_identity_token="$OLM_ID_TOKEN"
+```
+
+See [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) for a complete annotated pipeline.
 
 ## Examples
 
