@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: UDS CLI Setup
-        uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@9aaad66b21c7637b5be3d6aafdb21c9e7ff1df2a # v0.10.3
+        uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@fb1176bf4acea1310228e8723a3bea920e2888d0 # v0.11.0
 
       # attest:lint wraps your repo's 'lint' task with Witness attestation.
       # You MUST define a 'lint' task in your tasks.yaml — see examples/tasks.yaml.
