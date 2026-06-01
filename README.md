@@ -22,12 +22,12 @@ Every package goes through these stages in order:
 
 1. **Lint** — `attest:lint` runs your repo's `lint` task and signs the result
 2. **Scan** — `scan:security` runs Gitleaks (secrets) and OpenGrep (SAST) and signs each result
-3. **Build + Vouch** — `vouch:package` builds the Zarf package, then submits all signed attestations to OLM/CAT
+3. **Build + Vouch** — `build:zarf-package` builds the Zarf package; `vouch:package` submits signed attestations to OLM/CAT
 4. **Publish** — `publish:zarf-package` pushes the package to the UDS Army registry
 
 > **Tooling glossary**
 > - **Witness** — signs each pipeline step, producing `.json` attestation files as evidence
-> - **Sigstore / Fulcio** — keyless signing via OIDC (e.g. GitHub Actions token — no stored key needed in CI)
+> - **CAT / Fulcio** — CAT-brokered keyless signing; `olm:generate-fulcio-token` mints a short-lived token from `fulcio.uds-mil.us` before any Witness-attested step. No stored key needed in CI.
 > - **OLM / CAT** — UDS Army compliance tracking; receives signed attestations during `vouch`
 
 ## Prerequisites
@@ -84,7 +84,7 @@ See [`examples/tasks.yaml`](examples/tasks.yaml) for a full starting point.
 
 ### Minimal CI workflow (GitHub Actions)
 
-> **Note:** `vouch:package` calls `build:zarf-package` automatically.
+> **Note:** `build:zarf-package` and `vouch:package` are separate steps. Run build first, then vouch.
 
 ```yaml
 jobs:
@@ -166,6 +166,68 @@ service that is being packaged.
 For monorepos, pass the same service path to `gitleaks_scan_path`,
 `opengrep_scan_path`, and `zarf_path` so the evidence matches the package being
 cut.
+
+## Customer Deployment (Sandbox Preview)
+
+Passing a `uds-bundle.yaml` to `vouch:package` enables **Customer Deployment** — your application deployed into a UDS Army IL2 sandbox environment for preview and validation. Without it, vouching still succeeds and your package is eligible for publish; you just won't get the sandbox deploy.
+
+### What goes where
+
+| Artifact | Contains | Examples |
+|----------|----------|---------|
+| **Zarf package** | Your application — all services in one package | API server, worker, frontend |
+| **UDS Bundle** | Your app's Zarf package + any infrastructure it depends on | postgres-operator, minio, redis |
+
+Think of the Zarf package as your app and the bundle as the environment it runs in. Your application code should read backing-service connection details from environment variables — not bundle the services themselves into the package. This keeps your app portable across environments (local, staging, IL2).
+
+The platform automatically detects and strips testing infrastructure dependencies from your bundle before deploying to the sandbox, so you can submit the same `uds-bundle.yaml` you use for local development. You do not need to provide a `uds-config.yaml` — the platform supplies environment-specific configuration at deploy time.
+
+### Passing your bundle to vouch
+
+Add `--with uds_bundle="uds-bundle.yaml"` to your existing `vouch:package` call. The path should point to the `uds-bundle.yaml` in your repo.
+
+**GitHub Actions:**
+
+```shell
+uds run vouch:package \
+  --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
+  --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
+  --with olm_cat="cat-api.uds-mil.us" \
+  --with olm_org="<your-org-name>" \
+  --with uds_bundle="uds-bundle.yaml"
+```
+
+**GitLab CI** — also pass `olm_identity_token`:
+
+```shell
+uds run vouch:package \
+  --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
+  --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
+  --with olm_cat="cat-api.uds-mil.us" \
+  --with olm_org="<your-org-name>" \
+  --with olm_identity_token="$OLM_ID_TOKEN" \
+  --with uds_bundle="uds-bundle.yaml"
+```
+
+### Creating a bundle (if you don't have one yet)
+
+If you have not created a UDS Bundle for your application, see the [UDS CLI bundle documentation](https://docs.defenseunicorns.com/core/concepts/configuration--packaging/bundles/). A minimal bundle references your Zarf package from the registry and lists any infrastructure packages your app needs to run:
+
+```yaml
+kind: UDSBundle
+metadata:
+  name: my-app
+  description: My application bundle
+  version: 0.1.0
+
+packages:
+  - name: my-app
+    repository: registry.uds-mil.us/<your-org-name>/my-app
+    ref: 0.1.0
+  - name: postgres-operator
+    repository: ghcr.io/defenseunicorns/packages/uds/postgres-operator
+    ref: <version>
+```
 
 ## Custom Build Commands
 
@@ -252,19 +314,6 @@ the package produced by the current job. When `zarf_package` is unset, the task
 publishes the most recent `zarf-package-*.tar.zst` in the current directory. For
 local runs, pass `zarf_package` explicitly when old package artifacts may still
 be present.
-
-## Security Scan Scope
-
-`scan:gitleaks` scans tracked Git commits in the current package iteration, not
-the live working directory. It compares `HEAD` to the local `origin/main` or
-`origin/master` default branch ref and scopes the scan to `gitleaks_scan_path`.
-This keeps local-only files such as `.env` files, generated SARIF reports, and
-Witness attestations out of the scan while still letting monorepos scan only the
-service that is being packaged.
-
-For monorepos, pass the same service path to `gitleaks_scan_path`,
-`opengrep_scan_path`, and `zarf_path` so the evidence matches the package being
-cut.
 
 ## CI Provider Configuration
 

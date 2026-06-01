@@ -70,7 +70,20 @@ Consumers pin udm-common at a specific release tag in their `includes:` block. R
 Optional parameter on `vouch:package` and `olm:setup`. Used solely to authenticate to `ghcr.io` when downloading the OLM binary, avoiding anonymous pull rate limits. Has no role in OIDC, CAT auth, or Chainloop. Recommended for GitHub Actions CI but not required.
 
 ### Zarf Package
-The deployable artifact a consumer builds. Published to the UDS Army registry after vouching.
+The deployable artifact a consumer builds. Should contain **all components of the ISV's application** (e.g. API server, worker, frontend) in a single package — not split across multiple packages. Think of it as your app, not its infrastructure. Databases, message queues, and other backing services belong in the **UDS Bundle**, not here: your application code should treat them as attached resources, reading connection details from environment variables rather than bundling the services themselves. Published to the UDS Army registry after vouching.
+
+### UDS Bundle
+General UDS concept. Defined in a `uds-bundle.yaml` manifest, a bundle specifies which Zarf packages to deploy, in what order, and which Helm values or Zarf variables are configurable. Think of it as the blueprint: built once, deployed to multiple environments by pairing it with a **UDS Config** that fills in environment-specific values.
+
+In udm-common's pipeline, when `uds_bundle` is passed to `vouch:package`, the `uds-bundle.yaml` is submitted as a **Material** to Chainloop. CAT retrieves this material and uses it to submit a **Customer Deployment** CR, enabling sandbox preview of the ISV's application.
+
+ISVs may pass the same bundle they use for local testing — the platform detects and strips infrastructure dependencies (e.g. postgres-operator, minio) that are not needed in the UDS Army environment.
+
+### UDS Config
+General UDS concept. A `uds-config.yaml` file that supplies deployment-time values for a **UDS Bundle** — environment-specific secrets, hostnames, cluster endpoints, and other concrete values for variables the bundle exposes. Separate from the bundle itself so the same bundle artifact can be deployed to multiple environments without modification. The ISV authors the bundle; the UDS Army platform provides the config for the sandbox environment at deploy time. ISVs do not need to supply a `uds-config.yaml` to the pipeline.
+
+### Customer Deployment
+A Kubernetes custom resource (CR) submitted by CAT to an IL2 sandbox environment, enabling a preview/demo deploy of an ISV's application. Requires a **UDS Bundle** to be submitted as material during `vouch:package`. The sandbox module reads the CR and orchestrates the actual deployment. Distinct from a **Customer Run** (Chainloop evidence record) — a Customer Deployment is the live running instance, not the compliance record.
 
 ### Registry
 `registry.uds-mil.us` — the UDS Army OCI registry where vouched Zarf packages are published. Login uses the same SSO account from `sso.uds-mil.us`. Consumers self-serve registry credentials via the registry UI as either an **Organization Access Token** (recommended for CI — created by an org admin, shared via password manager, added as a CI secret or masked variable) or a **Personal Access Token** (per-user, recommended for local testing). Despite the "token" label, both types are dynamically generated username/password credential pairs, not API keys. Creating either type produces a ready-to-run `zarf tools registry login` command.

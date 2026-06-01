@@ -24,26 +24,40 @@ jobs:
       - name: UDS CLI Setup
         uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@560fc17745c6b3817d5c1d7c449081be19c59f3a # v0.12.0
 
+      # Must run before any Witness-attested step. Mints a short-lived token at .fulcio-token
+      # used by attest:lint, scan:security, and build:zarf-package for keyless signing.
+      - name: Generate Fulcio Token
+        run: |
+          uds run olm:generate-fulcio-token \
+            --with olm_cat="cat-api.uds-mil.us" \
+            --with olm_org="<your-org-name>" \
+            --with github_token="${{ secrets.GITHUB_TOKEN }}"
+
       # attest:lint wraps your repo's 'lint' task with Witness attestation.
       # You MUST define a 'lint' task in your tasks.yaml — see examples/tasks.yaml.
       - name: Lint
         run: uds run attest:lint
 
       - name: Security Scan
-        run: uds run scan:security \
-          --with opengrep_scan_path=/path/to/source_code # Adjust this as needed for your project
+        run: |
+          uds run scan:security \
+            --with opengrep_scan_path=/path/to/source_code # Adjust this as needed for your project
 
-      # --with build_command is optional. Use it if your build process is more complex than 'zarf package create' and requires additional setup steps.
-      # The command will run under Witness attestation, and you can use the same environment variables as in the zarf-package task (e.g. $ZARF_PATH, $ARCHITECTURE) to customize it.
-      # It is expected that this command will produce a zarf package. If you use this, the zarf_path and architecture inputs will be ignored since those should be handled in your custom command.
+      # --with build_command is optional. Use it if your build process is more complex than
+      # 'zarf package create' and requires additional setup steps.
+      - name: Build
+        run: uds run build:zarf-package
+
       - name: Vouch
         run: |
           uds run vouch:package \
             --with github_token="${{ secrets.GITHUB_TOKEN }}" \
-            --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json" \
+            --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
             --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
             --with olm_cat=cat-api.uds-mil.us \
             --with olm_org="<your-org-name>"
+            # Optional: pass a uds-bundle.yaml to enable Customer Deployment (sandbox preview).
+            # --with uds_bundle="uds-bundle.yaml"
 
       - name: Publish
         run: |
