@@ -172,7 +172,6 @@ tasks:
           openssl genpkey -algorithm ED25519 -out "$WITNESS_TEST_KEY" 2>/dev/null
           rm -f lint-witness.json
           uds run attest:lint \
-            --with enable_sigstore=false \
             --with witness_key_path="$WITNESS_TEST_KEY"
           rm -f "$WITNESS_TEST_KEY"
           test -s lint-witness.json || { echo "FAIL: lint-witness.json not created or empty"; exit 1; }
@@ -184,7 +183,6 @@ tasks:
           openssl genpkey -algorithm ED25519 -out "$WITNESS_TEST_KEY" 2>/dev/null
           rm -f gitleaks.sarif.json gitleaks-witness.json opengrep.sarif.json opengrep-witness.json
           uds run scan:security \
-            --with enable_sigstore=false \
             --with enable_archivista=false \
             --with witness_key_path="$WITNESS_TEST_KEY"
           rm -f "$WITNESS_TEST_KEY"
@@ -233,7 +231,7 @@ tasks:
         description: Directory for Witness to run attested commands from.
         default: ""
       enable_sigstore:
-        description: Sign attestations with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions).
+        description: Sign attestations with Fulcio. Set to false to skip Witness attestation entirely.
         default: "true"
       enable_archivista:
         description: Upload build attestation to Archivista.
@@ -246,6 +244,9 @@ tasks:
         default: ""
       olm_org:
         description: OLM organization name
+        default: ""
+      olm_identity_token:
+        description: OIDC identity token for CAT authentication. Required in GitLab CI — set via id_tokens with aud=cat and pass $OLM_ID_TOKEN. Leave empty for GitHub Actions (auto-detected).
         default: ""
       zarf_path:
         description: Path to the directory containing zarf.yaml
@@ -276,6 +277,19 @@ tasks:
           WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
           WITNESS_WORKINGDIR="${{ .inputs.witness_workingdir }}"
           ZARF_FLAVOR="${{ .inputs.zarf_flavor }}"
+          OLM_CAT="${{ .inputs.olm_cat }}"
+          OLM_ORG="${{ .inputs.olm_org }}"
+          OLM_IDENTITY_TOKEN="${{ .inputs.olm_identity_token }}"
+
+          if [ -n "$OLM_CAT" ] && [ -n "$OLM_ORG" ]; then
+            FULCIO_ARGS=(
+              --with olm_cat="$OLM_CAT"
+              --with olm_org="$OLM_ORG"
+              --with github_token="${{ .inputs.github_token }}"
+            )
+            [ -n "$OLM_IDENTITY_TOKEN" ] && FULCIO_ARGS+=(--with olm_identity_token="$OLM_IDENTITY_TOKEN")
+            uds run olm:generate-fulcio-token "${FULCIO_ARGS[@]}"
+          fi
 
           uds run scan:security \
             --with gitleaks_scan_path="${{ .inputs.gitleaks_scan_path }}" \
@@ -285,6 +299,19 @@ tasks:
             --with witness_workingdir="$WITNESS_WORKINGDIR" \
             --with enable_sigstore="${{ .inputs.enable_sigstore }}" \
             --with enable_archivista="${{ .inputs.enable_archivista }}"
+
+          BUILD_ARGS=(
+            --with zarf_path="${{ .inputs.zarf_path }}"
+            --with architecture="${{ .inputs.architecture }}"
+            --with witness_key_path="$WITNESS_KEY_PATH"
+            --with witness_workingdir="$WITNESS_WORKINGDIR"
+            --with enable_sigstore="${{ .inputs.enable_sigstore }}"
+            --with enable_archivista="${{ .inputs.enable_archivista }}"
+          )
+          if [ -n "$ZARF_FLAVOR" ]; then
+            BUILD_ARGS+=(--with zarf_flavor="$ZARF_FLAVOR")
+          fi
+          uds run build:zarf-package "${BUILD_ARGS[@]}"
 
           SARIF_FILE_LIST=()
           SCAN_ATTESTATION_LIST=()
@@ -302,6 +329,9 @@ tasks:
               SCAN_ATTESTATION_LIST+=(opengrep-witness.json)
             fi
           fi
+          if [ -s zarf-create-witness.json ]; then
+            SCAN_ATTESTATION_LIST+=(zarf-create-witness.json)
+          fi
 
           SARIF_FILES=$(IFS=,; echo "${SARIF_FILE_LIST[*]}")
           ALL_EXTRA=$(IFS=,; echo "${SCAN_ATTESTATION_LIST[*]}")
@@ -314,22 +344,12 @@ tasks:
           fi
 
           VOUCH_ARGS=(
-            --with zarf_path="${{ .inputs.zarf_path }}"
-            --with architecture="${{ .inputs.architecture }}"
             --with test_directory="${{ .inputs.test_directory }}"
-            --with github_token="${{ .inputs.github_token }}"
-            --with olm_cat="${{ .inputs.olm_cat }}"
-            --with olm_org="${{ .inputs.olm_org }}"
-            --with witness_key_path="$WITNESS_KEY_PATH"
-            --with witness_workingdir="$WITNESS_WORKINGDIR"
-            --with enable_sigstore="${{ .inputs.enable_sigstore }}"
-            --with enable_archivista="${{ .inputs.enable_archivista }}"
+            --with olm_cat="$OLM_CAT"
+            --with olm_org="$OLM_ORG"
             --with attestations="${ALL_EXTRA}"
             --with sarif_files="${SARIF_FILES}"
           )
-          if [ -n "$ZARF_FLAVOR" ]; then
-            VOUCH_ARGS+=(--with zarf_flavor="$ZARF_FLAVOR")
-          fi
           uds run vouch:package "${VOUCH_ARGS[@]}"
 
   - name: pipeline
@@ -351,7 +371,7 @@ tasks:
         description: Directory for Witness to run attested commands from.
         default: ""
       enable_sigstore:
-        description: Sign attestations with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions).
+        description: Sign attestations with Fulcio. Set to false to skip Witness attestation entirely.
         default: "true"
       enable_archivista:
         description: Upload build attestation to Archivista.
@@ -364,6 +384,9 @@ tasks:
         default: ""
       olm_org:
         description: OLM organization name
+        default: ""
+      olm_identity_token:
+        description: OIDC identity token for CAT authentication. Required in GitLab CI — set via id_tokens with aud=cat and pass $OLM_ID_TOKEN. Leave empty for GitHub Actions (auto-detected).
         default: ""
       registry:
         description: OCI registry to publish to
@@ -401,11 +424,24 @@ tasks:
 
           WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
           ZARF_FLAVOR="${{ .inputs.zarf_flavor }}"
+          OLM_CAT="${{ .inputs.olm_cat }}"
+          OLM_ORG="${{ .inputs.olm_org }}"
+          OLM_IDENTITY_TOKEN="${{ .inputs.olm_identity_token }}"
           EPHEMERAL_KEY=""
           if [ -z "$WITNESS_KEY_PATH" ]; then
             EPHEMERAL_KEY=$(mktemp /tmp/ephemeral-XXXXXX.pem)
             openssl genpkey -algorithm ED25519 -out "$EPHEMERAL_KEY" 2>/dev/null
             WITNESS_KEY_PATH="$EPHEMERAL_KEY"
+          fi
+
+          if [ -n "$OLM_CAT" ] && [ -n "$OLM_ORG" ]; then
+            FULCIO_ARGS=(
+              --with olm_cat="$OLM_CAT"
+              --with olm_org="$OLM_ORG"
+              --with github_token="${{ .inputs.github_token }}"
+            )
+            [ -n "$OLM_IDENTITY_TOKEN" ] && FULCIO_ARGS+=(--with olm_identity_token="$OLM_IDENTITY_TOKEN")
+            uds run olm:generate-fulcio-token "${FULCIO_ARGS[@]}"
           fi
 
           uds run attest:lint \
@@ -422,8 +458,9 @@ tasks:
             --with enable_sigstore="${{ .inputs.enable_sigstore }}"
             --with enable_archivista="${{ .inputs.enable_archivista }}"
             --with github_token="${{ .inputs.github_token }}"
-            --with olm_cat="${{ .inputs.olm_cat }}"
-            --with olm_org="${{ .inputs.olm_org }}"
+            --with olm_cat="$OLM_CAT"
+            --with olm_org="$OLM_ORG"
+            --with olm_identity_token="$OLM_IDENTITY_TOKEN"
             --with zarf_path="${{ .inputs.zarf_path }}"
             --with architecture="${{ .inputs.architecture }}"
             --with test_directory="${{ .inputs.test_directory }}"
@@ -433,6 +470,7 @@ tasks:
             PIPELINE_ARGS+=(--with zarf_flavor="$ZARF_FLAVOR")
           fi
           uds run scan-and-vouch "${PIPELINE_ARGS[@]}"
+
 
           if [ -n "$EPHEMERAL_KEY" ]; then
             rm -f "$EPHEMERAL_KEY"

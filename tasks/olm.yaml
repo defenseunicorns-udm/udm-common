@@ -6,7 +6,7 @@ tasks:
       version:
         description: Version of OLM CLI to install
         # renovate: datasource=github-releases depName=defenseunicorns/uds-dot-mil extractVersion=^olm-(?<version>.+)$
-        default: 0.1.19
+        default: 0.1.20
       github_token:
         description: GitHub token for GHCR authentication. Pass secrets.GITHUB_TOKEN in CI. Leave empty locally — the package is publicly accessible.
         default: ""
@@ -43,3 +43,62 @@ tasks:
             "oci://ghcr.io/defenseunicorns-udm/olm-installer:${{ .inputs.version }}-${OCI_OS}" --confirm
 
           chmod +x olm
+
+  - name: generate-fulcio-token
+    description: Generate a Fulcio signing token via CAT and write it to .fulcio-token
+    inputs:
+      olm_cat:
+        description: Domain of the CAT instance (e.g. cat-api.uds-mil.us)
+        default: ""
+      olm_org:
+        description: OLM organization name. Used as --org when calling CAT.
+        default: ""
+      olm_project:
+        description: OLM project name. Defaults to olm_org when empty. Override for orgs where project name differs from org name.
+        default: ""
+      olm_identity_token:
+        description: OIDC identity token for CAT authentication. In GitLab CI, set via id_tokens with aud=cat and pass $OLM_ID_TOKEN. Leave empty for GitHub Actions (auto-detected) or interactive device flow (local use).
+        default: ""
+      github_token:
+        description: GitHub token for GHCR authentication when installing OLM CLI. Leave empty locally.
+        default: ""
+    actions:
+      - description: Install OLM CLI and generate Fulcio token
+        shell:
+          linux: bash
+          darwin: bash
+        cmd: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+
+          OLM_CAT="${{ .inputs.olm_cat }}"
+          OLM_ORG="${{ .inputs.olm_org }}"
+          OLM_PROJECT="${{ .inputs.olm_project }}"
+          OLM_IDENTITY_TOKEN="${{ .inputs.olm_identity_token }}"
+
+          if [ -z "$OLM_CAT" ] || [ -z "$OLM_ORG" ]; then
+            echo "olm_cat and olm_org are required to generate a Fulcio token."
+            exit 1
+          fi
+          [ -z "$OLM_PROJECT" ] && OLM_PROJECT="$OLM_ORG"
+
+          uds run olm:setup --with github_token="${{ .inputs.github_token }}"
+
+          ARGS=(
+            tools generate-fulcio-token
+            --cat "$OLM_CAT"
+            --org "$OLM_ORG"
+            --project "$OLM_PROJECT"
+          )
+          if [ -n "$OLM_IDENTITY_TOKEN" ]; then
+            ARGS+=(--identity-token "$OLM_IDENTITY_TOKEN")
+          fi
+
+          TOKEN="$(./olm "${ARGS[@]}" 2>/dev/null)"
+          TOKEN="$(echo "$TOKEN" | tr -d '[:space:]')"
+          if [ -z "$TOKEN" ]; then
+            echo "ERROR: olm generate-fulcio-token returned empty output"
+            exit 1
+          fi
+          (umask 077; echo "$TOKEN" > .fulcio-token)
+          echo "Fulcio token written to .fulcio-token"

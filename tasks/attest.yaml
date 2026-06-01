@@ -6,17 +6,14 @@ tasks:
     description: Run the repo's lint task with Witness attestation, producing lint-witness.json
     inputs:
       witness_key_path:
-        description: Path to a local signing key for Witness. Leave empty in CI (Sigstore is used instead).
+        description: Path to a local signing key for Witness. Leave empty to sign via fulcio.uds-mil.us (uses .fulcio-token if present, otherwise triggers browser OIDC).
         default: ""
       witness_workingdir:
         description: Directory for Witness to run the attested command from.
         default: ""
       enable_sigstore:
-        description: Sign attestations with Sigstore/Fulcio. Requires OIDC token (e.g. GitHub Actions). Set to false for local runs without OIDC.
+        description: Sign attestations with Fulcio. Set to false to skip Witness attestation entirely.
         default: "true"
-      fulcio_oidc_issuer:
-        description: OIDC issuer URL for Sigstore/Fulcio signing. Override for non-GitHub CI providers (e.g. https://gitlab.com).
-        default: https://token.actions.githubusercontent.com
     actions:
       - description: Install Witness and run attested lint
         shell:
@@ -46,13 +43,11 @@ tasks:
           elif [ "$ENABLE_SIGSTORE" = "true" ]; then
             SHOULD_WITNESS="true"
             WITNESS_ARGS+=(
-              --signer-fulcio-url=https://fulcio.sigstore.dev
-              --signer-fulcio-oidc-client-id=sigstore
-              --signer-fulcio-oidc-issuer="${{ .inputs.fulcio_oidc_issuer }}"
+              --signer-fulcio-url=https://fulcio.uds-mil.us
               --timestamp-servers=https://timestamp.sigstore.dev/api/v1/timestamp
             )
-            if [ -n "${SIGSTORE_ID_TOKEN:-}" ]; then
-              WITNESS_ARGS+=(--signer-fulcio-token "$SIGSTORE_ID_TOKEN")
+            if [ -f ".fulcio-token" ]; then
+              WITNESS_ARGS+=(--signer-fulcio-token "$(cat .fulcio-token)")
             fi
           fi
           if [ -n "$WITNESS_WORKINGDIR" ]; then
@@ -63,6 +58,6 @@ tasks:
             uds run setup:witness
             witness run "${WITNESS_ARGS[@]}" -s=lint --outfile="$LINT_WITNESS" -- uds run lint
           else
-            echo "No signing key or Sigstore enabled. Running lint without Witness attestation."
+            echo "Sigstore disabled. Running lint without Witness attestation."
             uds run lint
           fi

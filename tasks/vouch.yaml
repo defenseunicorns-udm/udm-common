@@ -26,6 +26,9 @@ tasks:
       test_directory:
         description: Path to the test directory to pass to olm vouch. Leave empty to skip.
         default: tests
+      uds_bundle:
+        description: Path to a uds-bundle.yaml to attest as a sandbox-deployment material. Leave empty to skip.
+        default: ""
     actions:
       - description: Vouch for Zarf package via OLM
         shell:
@@ -121,6 +124,10 @@ tasks:
             OLM_ARGS+=(--attestations "$ALL_ATTESTATIONS")
           else
             echo "No Witness attestations provided; running OLM vouch without --attestations."
+          fi
+          UDS_BUNDLE="${{ .inputs.uds_bundle }}"
+          if [ -n "$UDS_BUNDLE" ]; then
+            OLM_ARGS+=(--uds-bundle "$UDS_BUNDLE")
           fi
           echo "====== Installing OLM CLI plugin ======"
           uds run olm:setup

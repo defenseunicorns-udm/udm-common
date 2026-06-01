@@ -7,3 +7,4 @@ witness-key.pem
 witness-pub.pem
 *.sarif.json
 olm
+.fulcio-token
