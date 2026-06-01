@@ -130,7 +130,7 @@ publish:
       aud: cat
 
   services:
-    - name: docker:24-dind
+    - name: docker:29-dind
       command: --tls=false
 
   needs:
