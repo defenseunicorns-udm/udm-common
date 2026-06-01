@@ -263,7 +263,7 @@ tasks:
           uds run scan:install-opengrep --with version="${{ .inputs.opengrep_version }}"
 
           # Base OpenGrep Command
-          OPENGREP_CMD=(opengrep scan "$OPENGREP_SCAN_PATH" --sarif --sarif-output "$OPENGREP_SARIF")
+          OPENGREP_CMD=(opengrep scan "$OPENGREP_SCAN_PATH" --sarif-output "$OPENGREP_SARIF")
           rm -f "$OPENGREP_WITNESS"
 
           WITNESS_ARGS=(-a=environment -a=git)
