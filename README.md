@@ -222,8 +222,8 @@ metadata:
 
 packages:
   - name: my-app
-    repository: registry.uds-mil.us/<your-org-name>/my-app
     ref: 0.1.0
+    path: ./my-app
   - name: postgres-operator
     repository: ghcr.io/defenseunicorns/packages/uds/postgres-operator
     ref: <version>
