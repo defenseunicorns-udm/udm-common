@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12.1](https://github.com/defenseunicorns-udm/udm-common/compare/v0.12.0...v0.12.1) (2026-06-02)
+
+
+### Bug Fixes
+
+* trigger release for docs update ([#106](https://github.com/defenseunicorns-udm/udm-common/issues/106)) ([0597aaf](https://github.com/defenseunicorns-udm/udm-common/commit/0597aaf87c878fda17058d20d1ed274fc5c66ac7))
+
 ## [0.12.0](https://github.com/defenseunicorns-udm/udm-common/compare/v0.11.0...v0.12.0) (2026-06-01)
 
 
