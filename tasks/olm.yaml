@@ -6,7 +6,7 @@ tasks:
       version:
         description: Version of OLM CLI to install
         # renovate: datasource=github-releases depName=defenseunicorns/uds-dot-mil extractVersion=^olm-(?<version>.+)$
-        default: 0.1.20
+        default: v0.1.21
       github_token:
         description: GitHub token for GHCR authentication. Pass secrets.GITHUB_TOKEN in CI. Leave empty locally — the package is publicly accessible.
         default: ""
