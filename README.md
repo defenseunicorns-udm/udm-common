@@ -34,7 +34,7 @@ Every package goes through these stages in order:
 
 ### UDS CLI
 
-All tasks require the [UDS CLI](https://github.com/defenseunicorns/uds-cli). Install it before running any `uds run` command.
+All tasks require the [UDS CLI](https://docs.defenseunicorns.com/cli/getting-started/installation/). Install it before running any `uds run` command.
 
 **GitHub Actions** — use the bundled setup action (already included in [`examples/ci-example.yaml`](examples/ci-example.yaml)):
 
@@ -62,7 +62,7 @@ See [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) for a complete GitLab i
 
 **You must define a `lint` task** in your repo's `tasks.yaml` before using `attest:lint` — `attest:lint`
 calls it. See [`examples/tasks.yaml`](examples/tasks.yaml) for patterns covering Python, Go, TypeScript,
-and monorepos.
+and monorepos. For an overview of the UDS task runner format, see [Use UDS Runner](https://docs.defenseunicorns.com/cli/how-to-guides/use-uds-runner/).
 
 ## Quickstart
 
@@ -176,11 +176,11 @@ Passing a `uds-bundle.yaml` to `vouch:package` enables **Customer Deployment** �
 | Artifact | Contains | Examples |
 |----------|----------|---------|
 | **Zarf package** | Your application — all services in one package | API server, worker, frontend |
-| **UDS Bundle** | Your app's Zarf package + any infrastructure it depends on | postgres-operator, minio, redis |
+| **[UDS Bundle](https://docs.defenseunicorns.com/core/concepts/configuration--packaging/bundles/)** | Your app's Zarf package + any infrastructure it depends on | postgres-operator, minio, redis |
 
 Think of the Zarf package as your app and the bundle as the environment it runs in. Your application code should read backing-service connection details from environment variables — not bundle the services themselves into the package. This keeps your app portable across environments (local, staging, IL2).
 
-The platform automatically detects and strips testing infrastructure dependencies from your bundle before deploying to the sandbox, so you can submit the same `uds-bundle.yaml` you use for local development. You do not need to provide a `uds-config.yaml` — the platform supplies environment-specific configuration at deploy time.
+The platform automatically detects and strips testing infrastructure dependencies from your bundle before deploying to the sandbox, so you can submit the same `uds-bundle.yaml` you use for local development. You do not need to provide a [`uds-config.yaml`](https://docs.defenseunicorns.com/cli/how-to-guides/use-bundle-overrides/) — the platform supplies environment-specific configuration at deploy time.
 
 ### Passing your bundle to vouch
 
