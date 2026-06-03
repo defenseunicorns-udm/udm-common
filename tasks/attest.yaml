@@ -6,7 +6,7 @@ tasks:
     description: Run the repo's lint task with Witness attestation, producing lint-witness.json
     inputs:
       witness_key_path:
-        description: Path to a local signing key for Witness. Leave empty to sign via fulcio.uds-mil.us (uses .fulcio-token if present, otherwise triggers browser OIDC).
+        description: Path to a local signing key for Witness. Leave empty to sign via the configured fulcio_url (uses .fulcio-token if present, otherwise triggers browser OIDC).
         default: ""
       witness_workingdir:
         description: Directory for Witness to run the attested command from.
@@ -14,6 +14,9 @@ tasks:
       enable_sigstore:
         description: Sign attestations with Fulcio. Set to false to skip Witness attestation entirely.
         default: "true"
+      fulcio_url:
+        description: Fulcio instance URL for keyless Witness signing. Defaults to the production CAT Fulcio; override per environment, e.g. https://fulcio.uds.run for staging.
+        default: https://fulcio.uds-mil.us
     actions:
       - description: Install Witness and run attested lint
         shell:
@@ -43,7 +46,7 @@ tasks:
           elif [ "$ENABLE_SIGSTORE" = "true" ]; then
             SHOULD_WITNESS="true"
             WITNESS_ARGS+=(
-              --signer-fulcio-url=https://fulcio.uds-mil.us
+              --signer-fulcio-url=${{ .inputs.fulcio_url }}
               --timestamp-servers=https://timestamp.sigstore.dev/api/v1/timestamp
             )
             if [ -f ".fulcio-token" ]; then

@@ -20,6 +20,9 @@ tasks:
       enable_sigstore:
         description: Sign the build attestation with Fulcio. Set to false to skip Witness attestation entirely.
         default: "true"
+      fulcio_url:
+        description: Fulcio instance URL for keyless Witness signing (used when witness_key_path is empty and enable_sigstore is true). Defaults to the production CAT Fulcio; override per environment, e.g. https://fulcio.uds.run for staging.
+        default: https://fulcio.uds-mil.us
       enable_archivista:
         description: Upload the attestation to Archivista.
         default: "false"
@@ -81,7 +84,7 @@ tasks:
           elif [ "$ENABLE_SIGSTORE" = "true" ]; then
             SHOULD_WITNESS="true"
             WITNESS_ARGS+=(
-              --signer-fulcio-url=https://fulcio.uds-mil.us
+              --signer-fulcio-url=${{ .inputs.fulcio_url }}
               --timestamp-servers=https://timestamp.sigstore.dev/api/v1/timestamp
             )
             if [ -f ".fulcio-token" ]; then

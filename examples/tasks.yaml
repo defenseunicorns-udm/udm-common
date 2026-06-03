@@ -73,6 +73,10 @@ tasks:
   #     - task: build:zarf-package
   #       with:
   #         build_command: ./scripts/my-build.sh
+  #         # Keyless Witness signing targets prod Fulcio (https://fulcio.uds-mil.us)
+  #         # by default. For a non-prod environment, override it (attest:lint and
+  #         # scan:security accept the same input):
+  #         # fulcio_url: https://fulcio.uds.run
 
   # Equivalent via vouch (builds + vouches in one step):
   # - name: vouch
