@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.13.0](https://github.com/defenseunicorns-udm/udm-common/compare/v0.12.1...v0.13.0) (2026-06-03)
+
+
+### Features
+
+* adding fulcio as the default signer ([#109](https://github.com/defenseunicorns-udm/udm-common/issues/109)) ([d10aa0a](https://github.com/defenseunicorns-udm/udm-common/commit/d10aa0a0c61cd6d8aa82b3d7ed74fddf6aa0f55c))
+
 ## [0.12.1](https://github.com/defenseunicorns-udm/udm-common/compare/v0.12.0...v0.12.1) (2026-06-02)
 
 
