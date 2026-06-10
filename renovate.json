@@ -6,8 +6,9 @@
   ],
   "github-actions": {
     "managerFilePatterns": [
-      "/^examples/ci-example\\.ya?ml$/",
-      "/^\\.github/actions/.*\\.ya?ml$/"
+      "/^\\.github/workflows/.*\\.ya?ml$/",
+      "/^\\.github/actions/.*\\.ya?ml$/",
+      "/^examples/ci-example\\.ya?ml$/"
     ]
   },
   "ignorePaths": [
@@ -64,9 +65,15 @@
   ],
   "packageRules": [
     {
+      "matchDatasources": ["docker", "github-actions", "github-releases"],
+      "minimumReleaseAge": "3 days",
+      "internalChecksFilter": "strict"
+    },
+    {
       "matchDepNames": ["defenseunicorns-udm/udm-common"],
       "groupName": "udm-common self-references",
-      "automerge": false
+      "automerge": false,
+      "minimumReleaseAge": "0 days"
     }
   ]
 }
