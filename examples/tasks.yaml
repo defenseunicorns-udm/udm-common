@@ -14,6 +14,7 @@ includes:
   - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.2/tasks/attest.yaml
   - build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.2/tasks/build.yaml
   - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.2/tasks/olm.yaml
+  - ossinsight: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.2/tasks/ossinsight.yaml
   - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.2/tasks/publish.yaml
   - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.2/tasks/scan.yaml
   - scorecard: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.2/tasks/scorecard.yaml

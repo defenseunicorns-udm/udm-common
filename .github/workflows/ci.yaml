@@ -62,6 +62,12 @@ jobs:
             --with scorecard_repo="github.com/${{ github.repository }}" \
             --with scorecard_token="${{ secrets.GITHUB_TOKEN }}"
 
+      - name: OSSInsight Community Health
+        run: |
+          uds run ossinsight:run \
+            --with ossinsight_owner="${{ github.repository_owner }}" \
+            --with ossinsight_repo="${{ github.event.repository.name }}"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
 
@@ -80,8 +86,9 @@ jobs:
           uds run vouch:package \
             --with olm_cat="cat-api.uds-mil.us" \
             --with olm_org="${{ secrets.OLM_ORG }}" \
-            --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,scorecard-witness.json,zarf-create-witness.json" \
-            --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json,scorecard.sarif.json"
+            --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,scorecard-witness.json,ossinsight-witness.json,zarf-create-witness.json" \
+            --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json,scorecard.sarif.json" \
+            --with evidence="ossinsight.json"
 
       - name: Publish Zarf Package to Registry
         run: |

@@ -14,6 +14,9 @@ tasks:
       sarif_files:
         description: Comma-separated list of SARIF files to include as evidence
         default: ""
+      evidence:
+        description: Comma-separated list of generic JSON evidence files to upload to Chainloop (e.g. ossinsight.json). Passed to olm vouch via --evidence.
+        default: ""
       olm_cat:
         description: Domain of the CAT instance
         default: ""
@@ -40,6 +43,7 @@ tasks:
 
           ATTESTATIONS="${{ .inputs.attestations }}"
           SARIF_FILES="${{ .inputs.sarif_files }}"
+          EVIDENCE="${{ .inputs.evidence }}"
           TEST_DIRECTORY="${{ .inputs.test_directory }}"
           OLM_CAT="${{ .inputs.olm_cat }}"
           OLM_ORG="${{ .inputs.olm_org }}"
@@ -100,6 +104,23 @@ tasks:
             done
           fi
 
+          EVIDENCE_FILES=()
+          if [ -n "$EVIDENCE" ]; then
+            IFS=',' read -ra PROVIDED_EVIDENCE <<< "$EVIDENCE"
+            for evidence_file in "${PROVIDED_EVIDENCE[@]}"; do
+              evidence_file="${evidence_file#"${evidence_file%%[![:space:]]*}"}"
+              evidence_file="${evidence_file%"${evidence_file##*[![:space:]]}"}"
+              if [ -z "$evidence_file" ]; then
+                continue
+              fi
+              if [ -s "$evidence_file" ]; then
+                EVIDENCE_FILES+=("$evidence_file")
+              else
+                echo "Skipping missing evidence file: $evidence_file"
+              fi
+            done
+          fi
+
           OLM_IDENTITY_TOKEN="${{ .inputs.olm_identity_token }}"
 
           OLM_ARGS=()
@@ -115,6 +136,10 @@ tasks:
           if [ "${#SARIF_EVIDENCE_FILES[@]}" -gt 0 ]; then
             ALL_SARIF_EVIDENCE=$(IFS=,; echo "${SARIF_EVIDENCE_FILES[*]}")
             OLM_ARGS+=(--sarif-evidence "$ALL_SARIF_EVIDENCE")
+          fi
+          if [ "${#EVIDENCE_FILES[@]}" -gt 0 ]; then
+            ALL_EVIDENCE=$(IFS=,; echo "${EVIDENCE_FILES[*]}")
+            OLM_ARGS+=(--evidence "$ALL_EVIDENCE")
           fi
           if [ -n "$TEST_DIRECTORY" ] && [ -d "$TEST_DIRECTORY" ]; then
             OLM_ARGS+=(--test-directory "$TEST_DIRECTORY")

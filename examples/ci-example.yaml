@@ -52,6 +52,15 @@ jobs:
             --with scorecard_repo="github.com/${{ github.repository }}" \
             --with scorecard_token="${{ secrets.GITHUB_TOKEN }}"
 
+      # OSSInsight community-health data (stargazer geography & organizations).
+      # Merged into one ossinsight.json, witness-attested, and uploaded to Chainloop
+      # as generic EVIDENCE via --with evidence below.
+      - name: OSSInsight
+        run: |
+          uds run ossinsight:run \
+            --with ossinsight_owner="${{ github.repository_owner }}" \
+            --with ossinsight_repo="${{ github.event.repository.name }}"
+
       # --with build_command is optional. Use it if your build process is more complex than
       # 'zarf package create' and requires additional setup steps.
       - name: Build
@@ -61,8 +70,9 @@ jobs:
         run: |
           uds run vouch:package \
             --with github_token="${{ secrets.GITHUB_TOKEN }}" \
-            --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,scorecard-witness.json,zarf-create-witness.json" \
+            --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,scorecard-witness.json,ossinsight-witness.json,zarf-create-witness.json" \
             --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json,scorecard.sarif.json" \
+            --with evidence="ossinsight.json" \
             --with olm_cat=cat-api.uds-mil.us \
             --with olm_org="<your-org-name>"
             # Optional: pass a uds-bundle.yaml to enable Customer Deployment (sandbox preview).

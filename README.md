@@ -12,6 +12,7 @@ the UDS Army registry.
 | `attest` | `lint` | Wraps your `lint` task with Witness attestation |
 | `scan` | `security`, `gitleaks`, `opengrep` | Runs Gitleaks secrets scanning and OpenGrep SAST |
 | `scorecard` | `run`, `install-scorecard` | Runs OpenSSF Scorecard repo-posture analysis under Witness attestation |
+| `ossinsight` | `run` | Fetches OSSInsight community-health data (stargazer geography/orgs) into one Witness-attested JSON evidence file |
 | `build` | `zarf-package` | Builds a Zarf package under Witness attestation |
 | `vouch` | `package` | Vouches for a signed Zarf package via OLM, pushing attestations to CAT |
 | `publish` | `zarf-package` | Publishes a vouched Zarf package to the UDS registry |
@@ -24,6 +25,7 @@ Every package goes through these stages in order:
 1. **Lint** — `attest:lint` runs your repo's `lint` task and signs the result
 2. **Scan** — `scan:security` runs Gitleaks (secrets) and OpenGrep (SAST) and signs each result
    - Optionally, `scorecard:run` runs OpenSSF Scorecard (repository posture) and signs its SARIF result
+   - Optionally, `ossinsight:run` fetches OSSInsight community-health data (stargazer geography/orgs) into one signed JSON, uploaded to Chainloop as generic `EVIDENCE`
 3. **Build + Vouch** — `build:zarf-package` builds the Zarf package; `vouch:package` submits signed attestations to OLM/CAT
 4. **Publish** — `publish:zarf-package` pushes the package to the UDS Army registry
 
@@ -299,6 +301,21 @@ uds run scorecard:run \
 Produces `scorecard.sarif.json` and `scorecard-witness.json`, which can be added
 to the `sarif_files`/`attestations` lists passed to `vouch:package`.
 
+**Fetch OSSInsight community-health data under Witness attestation:**
+
+```shell
+uds run ossinsight:run \
+  --with witness_key_path="$(pwd)/witness-key.pem" \
+  --with ossinsight_owner="keycloak" \
+  --with ossinsight_repo="keycloak"
+```
+
+Fetches every documented OSSInsight repo endpoint (stargazer geography &
+organizations are live today; the rest are recorded with their status) and merges
+them into one `ossinsight.json`, plus `ossinsight-witness.json`. The JSON is meant
+to be passed to `vouch:package` via `--with evidence=ossinsight.json`, which
+uploads it to Chainloop as a generic `EVIDENCE` material for policy evaluation.
+
 Build the Zarf package with Witness attestation:
 
 ```shell
@@ -312,8 +329,9 @@ Vouch for the package and push attestations to CAT:
 uds run vouch:package \
   --with olm_cat="<cat-domain>" \
   --with olm_org="<org>" \
-  --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,scorecard-witness.json,zarf-create-witness.json" \
-  --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json,scorecard.sarif.json"
+  --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,scorecard-witness.json,ossinsight-witness.json,zarf-create-witness.json" \
+  --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json,scorecard.sarif.json" \
+  --with evidence="ossinsight.json"
 ```
 
 When `zarf_package` is unset, `vouch:package` uses the most recent `zarf-package-*.tar.zst` in the current directory. Pass `--with zarf_package=<path>` explicitly for local runs where old artifacts may be present, or when a repo produces multiple packages.
@@ -336,7 +354,7 @@ be present.
 
 ## CI Provider Configuration
 
-All Witness attestation signing uses `fulcio.uds-mil.us` via a CAT-brokered token. Before any Witness-attested step, call `olm:generate-fulcio-token` to mint a short-lived JWT and write it to `.fulcio-token`. The attestation tasks (`attest:lint`, `scan:security`, `scan:gitleaks`, `scan:opengrep`, `scorecard:run`, `build:zarf-package`) read `.fulcio-token` automatically when it is present.
+All Witness attestation signing uses `fulcio.uds-mil.us` via a CAT-brokered token. Before any Witness-attested step, call `olm:generate-fulcio-token` to mint a short-lived JWT and write it to `.fulcio-token`. The attestation tasks (`attest:lint`, `scan:security`, `scan:gitleaks`, `scan:opengrep`, `scorecard:run`, `ossinsight:run`, `build:zarf-package`) read `.fulcio-token` automatically when it is present.
 
 On **GitHub Actions**, OLM auto-detects the GitHub OIDC token — no extra configuration needed beyond `id-token: write` on the job.
 

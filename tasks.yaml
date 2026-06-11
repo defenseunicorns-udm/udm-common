@@ -4,6 +4,7 @@ includes:
   - setup: ./tasks/setup.yaml
   - scan: ./tasks/scan.yaml
   - scorecard: ./tasks/scorecard.yaml
+  - ossinsight: ./tasks/ossinsight.yaml
   - build: ./tasks/build.yaml
   - olm: ./tasks/olm.yaml
   - vouch: ./tasks/vouch.yaml
@@ -215,6 +216,20 @@ tasks:
           rm -f scorecard.sarif.json scorecard-witness.json
           echo "PASS: scorecard:run"
 
+          echo "==> Testing ossinsight:run (ephemeral key)"
+          WITNESS_TEST_KEY=$(mktemp /tmp/witness-XXXXXX.pem)
+          openssl genpkey -algorithm ED25519 -out "$WITNESS_TEST_KEY" 2>/dev/null
+          rm -f ossinsight.json ossinsight-witness.json
+          uds run ossinsight:run \
+            --with ossinsight_owner=ossf \
+            --with ossinsight_repo=scorecard \
+            --with witness_key_path="$WITNESS_TEST_KEY"
+          rm -f "$WITNESS_TEST_KEY"
+          test -s ossinsight.json || { echo "FAIL: ossinsight.json not created or empty"; exit 1; }
+          test -s ossinsight-witness.json || { echo "FAIL: ossinsight-witness.json not created or empty"; exit 1; }
+          rm -f ossinsight.json ossinsight-witness.json
+          echo "PASS: ossinsight:run"
+
           echo "All tests passed."
 
   - name: tasks
@@ -253,6 +268,15 @@ tasks:
         default: .
       scorecard_token:
         description: GitHub/GitLab API token for Scorecard remote mode. In CI pass secrets.GITHUB_TOKEN.
+        default: ""
+      run_ossinsight:
+        description: Whether to fetch OSSInsight community-health data as evidence. Set to 'true' to enable.
+        default: "false"
+      ossinsight_owner:
+        description: GitHub owner/org of the OSS repo to analyze with OSSInsight. Required when run_ossinsight is true.
+        default: ""
+      ossinsight_repo:
+        description: GitHub repository name to analyze with OSSInsight. Required when run_ossinsight is true.
         default: ""
       witness_key_path:
         description: Path to a local signing key for Witness. Use for local runs without OIDC. Leave empty in CI (Sigstore is used instead).
@@ -308,6 +332,7 @@ tasks:
           WITNESS_WORKINGDIR="${{ .inputs.witness_workingdir }}"
           ZARF_FLAVOR="${{ .inputs.zarf_flavor }}"
           RUN_SCORECARD="${{ .inputs.run_scorecard }}"
+          RUN_OSSINSIGHT="${{ .inputs.run_ossinsight }}"
           OLM_CAT="${{ .inputs.olm_cat }}"
           OLM_ORG="${{ .inputs.olm_org }}"
           OLM_IDENTITY_TOKEN="${{ .inputs.olm_identity_token }}"
@@ -341,6 +366,15 @@ tasks:
               --with enable_sigstore="${{ .inputs.enable_sigstore }}"
           fi
 
+          if [ "$RUN_OSSINSIGHT" = "true" ]; then
+            uds run ossinsight:run \
+              --with ossinsight_owner="${{ .inputs.ossinsight_owner }}" \
+              --with ossinsight_repo="${{ .inputs.ossinsight_repo }}" \
+              --with witness_key_path="$WITNESS_KEY_PATH" \
+              --with witness_workingdir="$WITNESS_WORKINGDIR" \
+              --with enable_sigstore="${{ .inputs.enable_sigstore }}"
+          fi
+
           BUILD_ARGS=(
             --with zarf_path="${{ .inputs.zarf_path }}"
             --with architecture="${{ .inputs.architecture }}"
@@ -356,6 +390,7 @@ tasks:
 
           SARIF_FILE_LIST=()
           SCAN_ATTESTATION_LIST=()
+          EVIDENCE_FILE_LIST=()
           if [ -s gitleaks.sarif.json ]; then
             SARIF_FILE_LIST+=(gitleaks.sarif.json)
           fi
@@ -378,11 +413,20 @@ tasks:
               SCAN_ATTESTATION_LIST+=(scorecard-witness.json)
             fi
           fi
+          if [ "$RUN_OSSINSIGHT" = "true" ]; then
+            if [ -s ossinsight.json ]; then
+              EVIDENCE_FILE_LIST+=(ossinsight.json)
+            fi
+            if [ -s ossinsight-witness.json ]; then
+              SCAN_ATTESTATION_LIST+=(ossinsight-witness.json)
+            fi
+          fi
           if [ -s zarf-create-witness.json ]; then
             SCAN_ATTESTATION_LIST+=(zarf-create-witness.json)
           fi
 
           SARIF_FILES=$(IFS=,; echo "${SARIF_FILE_LIST[*]}")
+          EVIDENCE_FILES=$(IFS=,; echo "${EVIDENCE_FILE_LIST[*]}")
           ALL_EXTRA=$(IFS=,; echo "${SCAN_ATTESTATION_LIST[*]}")
           if [ -n "$EXTRA_ATTESTATIONS" ]; then
             if [ -n "$ALL_EXTRA" ]; then
@@ -398,6 +442,7 @@ tasks:
             --with olm_org="$OLM_ORG"
             --with attestations="${ALL_EXTRA}"
             --with sarif_files="${SARIF_FILES}"
+            --with evidence="${EVIDENCE_FILES}"
           )
           uds run vouch:package "${VOUCH_ARGS[@]}"
 
@@ -424,6 +469,15 @@ tasks:
         default: .
       scorecard_token:
         description: GitHub/GitLab API token for Scorecard remote mode. In CI pass secrets.GITHUB_TOKEN.
+        default: ""
+      run_ossinsight:
+        description: Whether to fetch OSSInsight community-health data as evidence. Set to 'true' to enable.
+        default: "false"
+      ossinsight_owner:
+        description: GitHub owner/org of the OSS repo to analyze with OSSInsight. Required when run_ossinsight is true.
+        default: ""
+      ossinsight_repo:
+        description: GitHub repository name to analyze with OSSInsight. Required when run_ossinsight is true.
         default: ""
       witness_key_path:
         description: Path to a local signing key for Witness. Leave empty to auto-generate an ephemeral key for local runs.
@@ -518,6 +572,9 @@ tasks:
             --with scorecard_repo="${{ .inputs.scorecard_repo }}"
             --with scorecard_local_path="${{ .inputs.scorecard_local_path }}"
             --with scorecard_token="${{ .inputs.scorecard_token }}"
+            --with run_ossinsight="${{ .inputs.run_ossinsight }}"
+            --with ossinsight_owner="${{ .inputs.ossinsight_owner }}"
+            --with ossinsight_repo="${{ .inputs.ossinsight_repo }}"
             --with witness_key_path="$WITNESS_KEY_PATH"
             --with witness_workingdir="${{ .inputs.witness_workingdir }}"
             --with enable_sigstore="${{ .inputs.enable_sigstore }}"

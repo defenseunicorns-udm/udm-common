@@ -57,6 +57,7 @@ Each step produces a signed **in-toto attestation** (`*-witness.json`). In CI, s
 | `tasks/attest.yaml` | `attest:` | Wrap consumer's `lint` task with Witness attestation |
 | `tasks/scan.yaml` | `scan:` | Gitleaks (secrets) + OpenGrep (SAST), produces SARIF |
 | `tasks/scorecard.yaml` | `scorecard:` | OpenSSF Scorecard repo-posture analysis, produces SARIF |
+| `tasks/ossinsight.yaml` | `ossinsight:` | OSSInsight community-health data (stargazer geography/orgs), produces one JSON evidence file |
 | `tasks/build.yaml` | `build:` | Build Zarf package with Witness attestation |
 | `tasks/vouch.yaml` | `vouch:` | Build + attest + submit to OLM/CAT |
 | `tasks/publish.yaml` | `publish:` | OCI registry publish via Zarf |

@@ -1,0 +1,131 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/defenseunicorns/maru-runner/refs/heads/main/tasks.schema.json
+
+tasks:
+
+  - name: run
+    description: Fetch OSSInsight community-health data for a repo into one JSON, wrapped in Witness attestation
+    inputs:
+      ossinsight_owner:
+        description: GitHub owner/org of the OSS repository to analyze (e.g. keycloak).
+        default: ""
+      ossinsight_repo:
+        description: GitHub repository name to analyze (e.g. keycloak).
+        default: ""
+      output_file:
+        description: Filename for the merged OSSInsight evidence JSON.
+        default: ossinsight.json
+      witness_key_path:
+        description: Path to a local signing key for Witness. Leave empty to sign via the configured fulcio_url.
+        default: ""
+      witness_workingdir:
+        description: Directory for Witness to run the attested command from. Use the caller repository workspace in composite actions so the git attestor sees a real checkout.
+        default: ""
+      enable_sigstore:
+        description: Sign the attestation with Fulcio. Set to false to skip Witness attestation entirely.
+        default: "true"
+      fulcio_url:
+        description: Fulcio instance URL for keyless Witness signing. Defaults to the production CAT Fulcio; override per environment, e.g. https://fulcio.uds.run for staging.
+        default: https://fulcio.uds-mil.us
+    actions:
+      - description: Fetch all OSSInsight endpoints into one JSON under Witness attestation
+        shell:
+          linux: bash
+          darwin: bash
+        cmd: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+
+          OSSINSIGHT_OWNER="${{ .inputs.ossinsight_owner }}"
+          OSSINSIGHT_REPO="${{ .inputs.ossinsight_repo }}"
+          WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
+          WITNESS_WORKINGDIR="${{ .inputs.witness_workingdir }}"
+          ENABLE_SIGSTORE="${{ .inputs.enable_sigstore }}"
+          OUTPUT_DIR="$(pwd)"
+          OSSINSIGHT_OUTPUT="${OUTPUT_DIR}/${{ .inputs.output_file }}"
+          OSSINSIGHT_WITNESS="${OUTPUT_DIR}/ossinsight-witness.json"
+
+          if [ -z "$OSSINSIGHT_OWNER" ] || [ -z "$OSSINSIGHT_REPO" ]; then
+            echo "ossinsight_owner and ossinsight_repo are required."
+            exit 1
+          fi
+          export OSSINSIGHT_OWNER OSSINSIGHT_REPO OSSINSIGHT_OUTPUT
+
+          # Generate the fetch+merge helper as a temp script so the whole
+          # data-gathering is a single command Witness can attest. The OSSInsight
+          # public API only serves a subset of repo endpoints today (the rest 500);
+          # every documented endpoint is attempted and its status recorded, so the
+          # evidence is self-documenting and auto-enriches if endpoints are restored.
+          FETCH_SCRIPT="$(mktemp /tmp/ossinsight-fetch-XXXXXX.sh)"
+          cleanup_fetch() { rm -f "$FETCH_SCRIPT"; }
+          trap cleanup_fetch EXIT
+          printf '%s\n' \
+            'set -euo pipefail' \
+            'export PATH="$HOME/.local/bin:$PATH"' \
+            'SLUG="$OSSINSIGHT_OWNER/$OSSINSIGHT_REPO"' \
+            'BASE="https://api.ossinsight.io/v1"' \
+            'OUTPUT="$OSSINSIGHT_OUTPUT"' \
+            'export SLUG BASE' \
+            'ENDPOINTS=(' \
+            '  stargazers/countries' \
+            '  stargazers/organizations' \
+            '  stargazers/historical' \
+            '  issue-creators/countries' \
+            '  issue-creators/organizations' \
+            '  issue-creators/historical' \
+            '  pull-request-creators/countries' \
+            '  pull-request-creators/organizations' \
+            '  pull-request-creators/historical' \
+            ')' \
+            'uds zarf tools yq -n -o=json ".source = \"ossinsight\" | .repo = strenv(SLUG) | .api_base = strenv(BASE) | .endpoints = {}" > "$OUTPUT"' \
+            'OK=0' \
+            'for EP in "${ENDPOINTS[@]}"; do' \
+            '  BODY="$(mktemp)"' \
+            '  CODE="$(curl -s -o "$BODY" -w "%{http_code}" "$BASE/repos/$SLUG/$EP" || echo 000)"' \
+            '  export EP CODE BODY' \
+            '  if [ "$CODE" = "200" ] && uds zarf tools yq -p=json "$BODY" >/dev/null 2>&1; then' \
+            '    uds zarf tools yq -i -o=json ".endpoints[strenv(EP)] = {\"status\": (env(CODE) | tonumber), \"data\": load(strenv(BODY))}" "$OUTPUT"' \
+            '    OK=$((OK + 1))' \
+            '  else' \
+            '    MSG="$(uds zarf tools yq -p=json -o=json ".message // \"non-json or empty body\"" "$BODY" 2>/dev/null || echo "fetch error")"' \
+            '    export MSG' \
+            '    uds zarf tools yq -i -o=json ".endpoints[strenv(EP)] = {\"status\": (env(CODE) | tonumber), \"error\": strenv(MSG)}" "$OUTPUT"' \
+            '  fi' \
+            '  rm -f "$BODY"' \
+            'done' \
+            'echo "OSSInsight evidence written to $OUTPUT ($OK/${#ENDPOINTS[@]} endpoints returned data)"' \
+            > "$FETCH_SCRIPT"
+
+          OSSINSIGHT_CMD=(bash "$FETCH_SCRIPT")
+          rm -f "$OSSINSIGHT_WITNESS"
+
+          WITNESS_ARGS=(-a=environment -a=git)
+          SHOULD_WITNESS="false"
+
+          if [ -n "$WITNESS_KEY_PATH" ]; then
+            SHOULD_WITNESS="true"
+            if [ ! -f "$WITNESS_KEY_PATH" ]; then
+              echo "Witness key file does not exist: $WITNESS_KEY_PATH"
+              exit 1
+            fi
+            WITNESS_ARGS+=(--signer-file-key-path "$WITNESS_KEY_PATH")
+          elif [ "$ENABLE_SIGSTORE" = "true" ]; then
+            SHOULD_WITNESS="true"
+            WITNESS_ARGS+=(
+              --signer-fulcio-url=${{ .inputs.fulcio_url }}
+              --timestamp-servers=https://timestamp.sigstore.dev/api/v1/timestamp
+            )
+            if [ -f ".fulcio-token" ]; then
+              WITNESS_ARGS+=(--signer-fulcio-token "$(cat .fulcio-token)")
+            fi
+          fi
+          if [ -n "$WITNESS_WORKINGDIR" ]; then
+            WITNESS_ARGS+=(--workingdir "$WITNESS_WORKINGDIR")
+          fi
+
+          if [ "$SHOULD_WITNESS" = "true" ]; then
+            uds run setup:witness
+            witness run "${WITNESS_ARGS[@]}" -s=ossinsight --outfile="$OSSINSIGHT_WITNESS" -- "${OSSINSIGHT_CMD[@]}"
+          else
+            echo "Sigstore disabled. Running OSSInsight fetch without Witness attestation."
+            "${OSSINSIGHT_CMD[@]}"
+          fi
