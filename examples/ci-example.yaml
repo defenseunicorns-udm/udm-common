@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: UDS CLI Setup
-        uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@286b9cf5203653352a3c9771d01f973a6fa4d185 # v0.13.1
+        uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@b45d4f4d34ecce6ffb3acb6105e83f5497f2251a # v0.13.2
 
       # Must run before any Witness-attested step. Mints a short-lived token at .fulcio-token
       # used by attest:lint, scan:security, and build:zarf-package for keyless signing.
