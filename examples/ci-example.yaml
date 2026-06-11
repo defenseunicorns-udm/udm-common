@@ -43,6 +43,15 @@ jobs:
           uds run scan:security \
             --with opengrep_scan_path=/path/to/source_code # Adjust this as needed for your project
 
+      # OpenSSF Scorecard analyzes repository posture (branch protection, signed
+      # releases, pinned dependencies, etc.). Remote mode needs an API token; omit
+      # scorecard_repo/scorecard_token to analyze the local checkout instead.
+      - name: Scorecard
+        run: |
+          uds run scorecard:run \
+            --with scorecard_repo="github.com/${{ github.repository }}" \
+            --with scorecard_token="${{ secrets.GITHUB_TOKEN }}"
+
       # --with build_command is optional. Use it if your build process is more complex than
       # 'zarf package create' and requires additional setup steps.
       - name: Build
@@ -52,8 +61,8 @@ jobs:
         run: |
           uds run vouch:package \
             --with github_token="${{ secrets.GITHUB_TOKEN }}" \
-            --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
-            --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
+            --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,scorecard-witness.json,zarf-create-witness.json" \
+            --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json,scorecard.sarif.json" \
             --with olm_cat=cat-api.uds-mil.us \
             --with olm_org="<your-org-name>"
             # Optional: pass a uds-bundle.yaml to enable Customer Deployment (sandbox preview).

@@ -16,6 +16,7 @@ includes:
   - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.2/tasks/olm.yaml
   - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.2/tasks/publish.yaml
   - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.2/tasks/scan.yaml
+  - scorecard: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.2/tasks/scorecard.yaml
   - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.2/tasks/setup.yaml
   - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.2/tasks/vouch.yaml
 

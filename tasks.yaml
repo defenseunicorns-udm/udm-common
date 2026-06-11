@@ -3,6 +3,7 @@
 includes:
   - setup: ./tasks/setup.yaml
   - scan: ./tasks/scan.yaml
+  - scorecard: ./tasks/scorecard.yaml
   - build: ./tasks/build.yaml
   - olm: ./tasks/olm.yaml
   - vouch: ./tasks/vouch.yaml
@@ -197,6 +198,23 @@ tasks:
           rm -f gitleaks.sarif.json gitleaks-witness.json opengrep.sarif.json opengrep-witness.json
           echo "PASS: scan:security"
 
+          echo "==> Testing scorecard:install-scorecard"
+          uds run scorecard:install-scorecard
+          test -x "$HOME/.local/bin/scorecard" || { echo "FAIL: scorecard:install-scorecard did not install scorecard to \$HOME/.local/bin"; exit 1; }
+          echo "PASS: scorecard:install-scorecard"
+
+          echo "==> Testing scorecard:run (local mode, ephemeral key)"
+          WITNESS_TEST_KEY=$(mktemp /tmp/witness-XXXXXX.pem)
+          openssl genpkey -algorithm ED25519 -out "$WITNESS_TEST_KEY" 2>/dev/null
+          rm -f scorecard.sarif.json scorecard-witness.json
+          uds run scorecard:run \
+            --with witness_key_path="$WITNESS_TEST_KEY"
+          rm -f "$WITNESS_TEST_KEY"
+          test -s scorecard.sarif.json || { echo "FAIL: scorecard.sarif.json not created or empty"; exit 1; }
+          test -s scorecard-witness.json || { echo "FAIL: scorecard-witness.json not created or empty"; exit 1; }
+          rm -f scorecard.sarif.json scorecard-witness.json
+          echo "PASS: scorecard:run"
+
           echo "All tests passed."
 
   - name: tasks
@@ -224,6 +242,18 @@ tasks:
       run_opengrep:
         description: Whether to run OpenGrep SAST. Set to 'false' to skip.
         default: "true"
+      run_scorecard:
+        description: Whether to run OpenSSF Scorecard. Set to 'true' to enable.
+        default: "false"
+      scorecard_repo:
+        description: Remote repository for Scorecard to analyze (e.g. github.com/org/repo). Leave empty to analyze the local checkout.
+        default: ""
+      scorecard_local_path:
+        description: Path to the local checkout for Scorecard to analyze when scorecard_repo is empty.
+        default: .
+      scorecard_token:
+        description: GitHub/GitLab API token for Scorecard remote mode. In CI pass secrets.GITHUB_TOKEN.
+        default: ""
       witness_key_path:
         description: Path to a local signing key for Witness. Use for local runs without OIDC. Leave empty in CI (Sigstore is used instead).
         default: ""
@@ -277,6 +307,7 @@ tasks:
           WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
           WITNESS_WORKINGDIR="${{ .inputs.witness_workingdir }}"
           ZARF_FLAVOR="${{ .inputs.zarf_flavor }}"
+          RUN_SCORECARD="${{ .inputs.run_scorecard }}"
           OLM_CAT="${{ .inputs.olm_cat }}"
           OLM_ORG="${{ .inputs.olm_org }}"
           OLM_IDENTITY_TOKEN="${{ .inputs.olm_identity_token }}"
@@ -299,6 +330,16 @@ tasks:
             --with witness_workingdir="$WITNESS_WORKINGDIR" \
             --with enable_sigstore="${{ .inputs.enable_sigstore }}" \
             --with enable_archivista="${{ .inputs.enable_archivista }}"
+
+          if [ "$RUN_SCORECARD" = "true" ]; then
+            uds run scorecard:run \
+              --with scorecard_repo="${{ .inputs.scorecard_repo }}" \
+              --with scorecard_local_path="${{ .inputs.scorecard_local_path }}" \
+              --with scorecard_token="${{ .inputs.scorecard_token }}" \
+              --with witness_key_path="$WITNESS_KEY_PATH" \
+              --with witness_workingdir="$WITNESS_WORKINGDIR" \
+              --with enable_sigstore="${{ .inputs.enable_sigstore }}"
+          fi
 
           BUILD_ARGS=(
             --with zarf_path="${{ .inputs.zarf_path }}"
@@ -327,6 +368,14 @@ tasks:
             fi
             if [ -s opengrep-witness.json ]; then
               SCAN_ATTESTATION_LIST+=(opengrep-witness.json)
+            fi
+          fi
+          if [ "$RUN_SCORECARD" = "true" ]; then
+            if [ -s scorecard.sarif.json ]; then
+              SARIF_FILE_LIST+=(scorecard.sarif.json)
+            fi
+            if [ -s scorecard-witness.json ]; then
+              SCAN_ATTESTATION_LIST+=(scorecard-witness.json)
             fi
           fi
           if [ -s zarf-create-witness.json ]; then
@@ -364,6 +413,18 @@ tasks:
       run_opengrep:
         description: Whether to run OpenGrep SAST. Set to 'false' to skip.
         default: "true"
+      run_scorecard:
+        description: Whether to run OpenSSF Scorecard. Set to 'true' to enable.
+        default: "false"
+      scorecard_repo:
+        description: Remote repository for Scorecard to analyze (e.g. github.com/org/repo). Leave empty to analyze the local checkout.
+        default: ""
+      scorecard_local_path:
+        description: Path to the local checkout for Scorecard to analyze when scorecard_repo is empty.
+        default: .
+      scorecard_token:
+        description: GitHub/GitLab API token for Scorecard remote mode. In CI pass secrets.GITHUB_TOKEN.
+        default: ""
       witness_key_path:
         description: Path to a local signing key for Witness. Leave empty to auto-generate an ephemeral key for local runs.
         default: ""
@@ -453,6 +514,10 @@ tasks:
             --with gitleaks_scan_path="${{ .inputs.gitleaks_scan_path }}"
             --with opengrep_scan_path="${{ .inputs.opengrep_scan_path }}"
             --with run_opengrep="${{ .inputs.run_opengrep }}"
+            --with run_scorecard="${{ .inputs.run_scorecard }}"
+            --with scorecard_repo="${{ .inputs.scorecard_repo }}"
+            --with scorecard_local_path="${{ .inputs.scorecard_local_path }}"
+            --with scorecard_token="${{ .inputs.scorecard_token }}"
             --with witness_key_path="$WITNESS_KEY_PATH"
             --with witness_workingdir="${{ .inputs.witness_workingdir }}"
             --with enable_sigstore="${{ .inputs.enable_sigstore }}"

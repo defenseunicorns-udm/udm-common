@@ -11,6 +11,7 @@ the UDS Army registry.
 | `setup` | `uds-cli`, `cosign`, `witness` | Installs pipeline tooling |
 | `attest` | `lint` | Wraps your `lint` task with Witness attestation |
 | `scan` | `security`, `gitleaks`, `opengrep` | Runs Gitleaks secrets scanning and OpenGrep SAST |
+| `scorecard` | `run`, `install-scorecard` | Runs OpenSSF Scorecard repo-posture analysis under Witness attestation |
 | `build` | `zarf-package` | Builds a Zarf package under Witness attestation |
 | `vouch` | `package` | Vouches for a signed Zarf package via OLM, pushing attestations to CAT |
 | `publish` | `zarf-package` | Publishes a vouched Zarf package to the UDS registry |
@@ -22,6 +23,7 @@ Every package goes through these stages in order:
 
 1. **Lint** — `attest:lint` runs your repo's `lint` task and signs the result
 2. **Scan** — `scan:security` runs Gitleaks (secrets) and OpenGrep (SAST) and signs each result
+   - Optionally, `scorecard:run` runs OpenSSF Scorecard (repository posture) and signs its SARIF result
 3. **Build + Vouch** — `build:zarf-package` builds the Zarf package; `vouch:package` submits signed attestations to OLM/CAT
 4. **Publish** — `publish:zarf-package` pushes the package to the UDS Army registry
 
@@ -280,6 +282,23 @@ uds run scan:security \
   --with opengrep_scan_path="."
 ```
 
+**Run OpenSSF Scorecard under Witness attestation:**
+
+```shell
+# Local checkout (no token, reduced check coverage)
+uds run scorecard:run \
+  --with witness_key_path="$(pwd)/witness-key.pem"
+
+# Remote repository (full check coverage, needs an API token)
+uds run scorecard:run \
+  --with witness_key_path="$(pwd)/witness-key.pem" \
+  --with scorecard_repo="github.com/<org>/<repo>" \
+  --with scorecard_token="$GITHUB_TOKEN"
+```
+
+Produces `scorecard.sarif.json` and `scorecard-witness.json`, which can be added
+to the `sarif_files`/`attestations` lists passed to `vouch:package`.
+
 Build the Zarf package with Witness attestation:
 
 ```shell
@@ -293,8 +312,8 @@ Vouch for the package and push attestations to CAT:
 uds run vouch:package \
   --with olm_cat="<cat-domain>" \
   --with olm_org="<org>" \
-  --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
-  --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json"
+  --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,scorecard-witness.json,zarf-create-witness.json" \
+  --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json,scorecard.sarif.json"
 ```
 
 When `zarf_package` is unset, `vouch:package` uses the most recent `zarf-package-*.tar.zst` in the current directory. Pass `--with zarf_package=<path>` explicitly for local runs where old artifacts may be present, or when a repo produces multiple packages.
@@ -317,7 +336,7 @@ be present.
 
 ## CI Provider Configuration
 
-All Witness attestation signing uses `fulcio.uds-mil.us` via a CAT-brokered token. Before any Witness-attested step, call `olm:generate-fulcio-token` to mint a short-lived JWT and write it to `.fulcio-token`. The attestation tasks (`attest:lint`, `scan:security`, `scan:gitleaks`, `scan:opengrep`, `build:zarf-package`) read `.fulcio-token` automatically when it is present.
+All Witness attestation signing uses `fulcio.uds-mil.us` via a CAT-brokered token. Before any Witness-attested step, call `olm:generate-fulcio-token` to mint a short-lived JWT and write it to `.fulcio-token`. The attestation tasks (`attest:lint`, `scan:security`, `scan:gitleaks`, `scan:opengrep`, `scorecard:run`, `build:zarf-package`) read `.fulcio-token` automatically when it is present.
 
 On **GitHub Actions**, OLM auto-detects the GitHub OIDC token — no extra configuration needed beyond `id-token: write` on the job.
 
