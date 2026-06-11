@@ -63,6 +63,9 @@ tasks:
       scorecard_token:
         description: GitHub/GitLab API token for remote mode. Exported as GITHUB_AUTH_TOKEN. In CI pass secrets.GITHUB_TOKEN. Ignored in local mode.
         default: ""
+      scorecard_policy_path:
+        description: Path to a Scorecard policy file (required by the SARIF formatter). Leave empty to generate the upstream scorecard-action default policy.
+        default: ""
       witness_key_path:
         description: Path to a local signing key for Witness. Leave empty to sign via the configured fulcio_url.
         default: ""
@@ -87,6 +90,7 @@ tasks:
           SCORECARD_REPO="${{ .inputs.scorecard_repo }}"
           SCORECARD_LOCAL_PATH="${{ .inputs.scorecard_local_path }}"
           SCORECARD_TOKEN="${{ .inputs.scorecard_token }}"
+          SCORECARD_POLICY_PATH="${{ .inputs.scorecard_policy_path }}"
           WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
           WITNESS_WORKINGDIR="${{ .inputs.witness_workingdir }}"
           ENABLE_SIGSTORE="${{ .inputs.enable_sigstore }}"
@@ -99,18 +103,54 @@ tasks:
           # Remote mode (--repo) queries the host API for full check coverage and
           # needs a token. Local mode (--local) analyzes the checkout with a
           # reduced set of checks and needs no token.
+          SCORECARD_TARGET_ARGS=()
           if [ -n "$SCORECARD_REPO" ]; then
             if [ -n "$SCORECARD_TOKEN" ]; then
               export GITHUB_AUTH_TOKEN="$SCORECARD_TOKEN"
             fi
-            SCORECARD_TARGET="--repo=$SCORECARD_REPO"
+            SCORECARD_TARGET_ARGS=(--repo="$SCORECARD_REPO")
           else
-            SCORECARD_TARGET="--local $SCORECARD_LOCAL_PATH"
+            SCORECARD_TARGET_ARGS=(--local "$SCORECARD_LOCAL_PATH")
           fi
 
-          # Scorecard emits SARIF to stdout, so wrap the redirection in bash -c
-          # to keep it inside the command Witness attests.
-          SCORECARD_CMD=(bash -c "scorecard $SCORECARD_TARGET --format=sarif > \"$SCORECARD_SARIF\"")
+          # The SARIF formatter requires a policy file mapping each check to a
+          # score threshold. Use the caller-provided one, or generate the upstream
+          # scorecard-action default policy so the task stays self-contained.
+          CLEANUP_POLICY=""
+          cleanup_policy() { [ -n "$CLEANUP_POLICY" ] && rm -f "$CLEANUP_POLICY"; }
+          trap cleanup_policy EXIT
+          POLICY_FILE="$SCORECARD_POLICY_PATH"
+          if [ -z "$POLICY_FILE" ]; then
+            POLICY_FILE="$(mktemp /tmp/scorecard-policy-XXXXXX.yml)"
+            CLEANUP_POLICY="$POLICY_FILE"
+            printf '%s\n' \
+              'version: 1' \
+              'policies:' \
+              '  Token-Permissions: {score: 10, mode: enforced}' \
+              '  Branch-Protection: {score: 10, mode: enforced}' \
+              '  Code-Review: {score: 10, mode: enforced}' \
+              '  Dangerous-Workflow: {score: 10, mode: enforced}' \
+              '  License: {score: 9, mode: enforced}' \
+              '  Pinned-Dependencies: {score: 10, mode: enforced}' \
+              '  Security-Policy: {score: 10, mode: enforced}' \
+              '  SAST: {score: 10, mode: enforced}' \
+              '  Contributors: {score: 10, mode: disabled}' \
+              '  Packaging: {score: 10, mode: enforced}' \
+              '  Binary-Artifacts: {score: 10, mode: enforced}' \
+              '  Signed-Releases: {score: 10, mode: disabled}' \
+              '  Dependency-Update-Tool: {score: 10, mode: enforced}' \
+              '  Fuzzing: {score: 10, mode: enforced}' \
+              '  CII-Best-Practices: {score: 5, mode: enforced}' \
+              '  Vulnerabilities: {score: 10, mode: enforced}' \
+              '  CI-Tests: {score: 10, mode: enforced}' \
+              '  Maintained: {score: 1, mode: enforced}' \
+              > "$POLICY_FILE"
+          fi
+
+          # SARIF output is experimental in the scorecard CLI and only validates
+          # when ENABLE_SARIF=1 is set (the official scorecard-action does the same).
+          export ENABLE_SARIF=1
+          SCORECARD_CMD=(scorecard "${SCORECARD_TARGET_ARGS[@]}" --format=sarif --policy "$POLICY_FILE" --output "$SCORECARD_SARIF")
           rm -f "$SCORECARD_WITNESS"
 
           WITNESS_ARGS=(-a=environment -a=git)
