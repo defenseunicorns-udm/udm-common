@@ -2,7 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: nginx
   description: UDS nginx package
-  version: 0.13.1
+  version: 0.13.2
 variables:
   - name: DOMAIN
     default: uds.dev

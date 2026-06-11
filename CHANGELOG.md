@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.13.2](https://github.com/defenseunicorns-udm/udm-common/compare/v0.13.1...v0.13.2) (2026-06-11)
+
+
+### Bug Fixes
+
+* **renovate:** harden dependency update policy ([#117](https://github.com/defenseunicorns-udm/udm-common/issues/117)) ([6d121d8](https://github.com/defenseunicorns-udm/udm-common/commit/6d121d8de9dce8f09ff6311d6b7737fab2c16ca6))
+
 ## [0.13.1](https://github.com/defenseunicorns-udm/udm-common/compare/v0.13.0...v0.13.1) (2026-06-10)
 
 
