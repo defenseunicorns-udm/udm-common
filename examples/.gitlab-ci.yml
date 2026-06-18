@@ -23,7 +23,7 @@ stages:
 variables:
   # Generic: pin the UDS CLI version used by the pipeline.
   # renovate: datasource=github-releases depName=defenseunicorns/uds-cli
-  UDS_VERSION: v0.32.0
+  UDS_VERSION: v0.33.0
 
   # Generic: required when using the docker:dind service without TLS.
   DOCKER_HOST: tcp://docker:2375
