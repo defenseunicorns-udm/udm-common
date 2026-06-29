@@ -74,6 +74,10 @@
       "groupName": "udm-common self-references",
       "automerge": false,
       "minimumReleaseAge": "0 days"
+    },
+    {
+      "matchDepNames": ["defenseunicorns-udm/olm"],
+      "minimumReleaseAge": "0 days"
     }
   ]
 }
