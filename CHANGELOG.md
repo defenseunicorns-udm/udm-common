@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.13.3](https://github.com/defenseunicorns-udm/udm-common/compare/v0.13.2...v0.13.3) (2026-06-29)
+
+
+### Bug Fixes
+
+* **deps:** bump olm to 0.1.24, skip release age hold ([#124](https://github.com/defenseunicorns-udm/udm-common/issues/124)) ([12a72e1](https://github.com/defenseunicorns-udm/udm-common/commit/12a72e179054c28b8963341954c9bfeb76142887))
+
 ## [0.13.2](https://github.com/defenseunicorns-udm/udm-common/compare/v0.13.1...v0.13.2) (2026-06-11)
 
 
