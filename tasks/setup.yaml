@@ -203,3 +203,597 @@ tasks:
           cp "$CACHE_DIR/witness" "$INSTALL_DIR/witness"
           chmod +x "$INSTALL_DIR/witness"
           echo "Witness ${VERSION} installed to ${INSTALL_DIR}/witness"
+
+  - name: validate
+    description: Check pipeline prerequisites and print a PASS/FAIL checklist
+    actions:
+      - description: Validate prerequisites for the UDM pipeline
+        shell:
+          linux: bash
+          darwin: bash
+        cmd: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+
+          PASS=0
+          FAIL=0
+
+          check() {
+            local name="$1" result="$2" hint="${3:-}"
+            if [ "$result" = "true" ]; then
+              printf "  %-8s %s\n" "PASS" "$name"
+              PASS=$((PASS + 1))
+            else
+              printf "  %-8s %s\n" "FAIL" "$name"
+              [ -n "$hint" ] && printf "          hint: %s\n" "$hint"
+              FAIL=$((FAIL + 1))
+            fi
+          }
+
+          echo ""
+          echo "=== UDM Common Prerequisites ==="
+          echo ""
+
+          if command -v uds > /dev/null 2>&1; then
+            check "uds-cli" "true"
+          else
+            check "uds-cli" "false" "uds run setup:uds-cli"
+          fi
+
+          if test -x "$HOME/.local/bin/witness"; then
+            check "witness" "true"
+          else
+            check "witness" "false" "uds run setup:witness"
+          fi
+
+          if command -v cosign > /dev/null 2>&1; then
+            check "cosign" "true"
+          else
+            check "cosign" "false" "uds run setup:cosign"
+          fi
+
+          if test -x ./olm; then
+            check "olm-cli" "true"
+          else
+            check "olm-cli" "false" "uds run olm:setup"
+          fi
+
+          if [ -f .fulcio-token ] || { [ -n "${OLM_CAT:-}" ] && [ -n "${OLM_ORG:-}" ]; }; then
+            check "fulcio-credentials" "true"
+          else
+            check "fulcio-credentials" "false" "need .fulcio-token or both OLM_CAT and OLM_ORG env vars"
+          fi
+
+          REPLACE_ME_FILES=""
+          for f in tasks.yaml udm-ci-snippet.yaml .github/workflows/udm.yaml .gitlab-ci.yml; do
+            [ -f "$f" ] || continue
+            if grep -q 'REPLACE_ME' "$f" 2>/dev/null; then
+              REPLACE_ME_FILES="${REPLACE_ME_FILES:+$REPLACE_ME_FILES, }$f"
+            fi
+          done
+          if [ -z "$REPLACE_ME_FILES" ]; then
+            check "no-replace-me-markers" "true"
+          else
+            check "no-replace-me-markers" "false" "unfilled placeholders in: $REPLACE_ME_FILES"
+          fi
+
+          echo ""
+          printf "  %d passed, %d failed\n" "$PASS" "$FAIL"
+          echo ""
+
+          [ "$FAIL" -eq 0 ]
+
+  - name: generate
+    description: Generate a CI workflow file or snippet for GitHub Actions or GitLab CI
+    inputs:
+      platform:
+        description: CI platform (github|gitlab)
+        default: ""
+      repo_pattern:
+        description: Repository pattern — mono (snippet) or dedicated (complete file)
+        default: ""
+      output_file:
+        description: Override the default output file path
+        default: ""
+      force:
+        description: Overwrite existing output file
+        default: "false"
+      version:
+        description: udm-common version to pin in generated output
+        # renovate: datasource=github-releases depName=defenseunicorns-udm/udm-common
+        default: v0.13.3
+    actions:
+      - description: Generate CI file from embedded template
+        shell:
+          linux: bash
+          darwin: bash
+        cmd: |
+          set -euo pipefail
+          PLATFORM=${{ .inputs.platform }}
+          REPO_PATTERN=${{ .inputs.repo_pattern }}
+          FORCE=${{ .inputs.force }}
+          VERSION=${{ .inputs.version }}
+          CUSTOM_OUTPUT=${{ .inputs.output_file }}
+
+          # Build sigils at runtime to avoid Maru template substitution of secrets references
+          _GH='$'
+          _L='{'
+          _R='}'
+          _OB="${_L}${_L}"
+          _CB="${_R}${_R}"
+
+          # Validate VERSION is a safe semver string before use in sed substitution
+          if ! echo "$VERSION" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "ERROR: version must be a semantic version like v0.13.3, got: $VERSION"
+            exit 1
+          fi
+          # Validate output_file is a safe relative path (no absolute paths or '..' traversal)
+          if [ -n "$CUSTOM_OUTPUT" ]; then
+            case "$CUSTOM_OUTPUT" in
+              /*) echo "ERROR: output_file must not be an absolute path."; exit 1 ;;
+              ../*|*/../*|*/..) echo "ERROR: output_file must not contain '..' path traversal."; exit 1 ;;
+            esac
+          fi
+
+          if [ -z "$PLATFORM" ]; then
+            echo "ERROR: --with platform= is required (github|gitlab)"
+            exit 1
+          fi
+          if [ -z "$REPO_PATTERN" ]; then
+            echo "ERROR: --with repo_pattern= is required (mono|dedicated)"
+            exit 1
+          fi
+          if [ "$PLATFORM" != "github" ] && [ "$PLATFORM" != "gitlab" ]; then
+            echo "ERROR: platform must be 'github' or 'gitlab', got: $PLATFORM"
+            exit 1
+          fi
+          if [ "$REPO_PATTERN" != "mono" ] && [ "$REPO_PATTERN" != "dedicated" ]; then
+            echo "ERROR: repo_pattern must be 'mono' or 'dedicated', got: $REPO_PATTERN"
+            exit 1
+          fi
+
+          if [ -n "$CUSTOM_OUTPUT" ]; then
+            OUTPUT_FILE="$CUSTOM_OUTPUT"
+          elif [ "$PLATFORM" = "github" ] && [ "$REPO_PATTERN" = "dedicated" ]; then
+            OUTPUT_FILE=".github/workflows/udm.yaml"
+          else
+            OUTPUT_FILE="udm-ci-snippet.yaml"
+          fi
+
+          if [ -f "$OUTPUT_FILE" ] && [ "$FORCE" != "true" ]; then
+            echo "ERROR: $OUTPUT_FILE already exists."
+            echo "  Re-run with --with force=true to overwrite."
+            exit 1
+          fi
+
+          mkdir -p "$(dirname "$OUTPUT_FILE")"
+
+          if [ "$PLATFORM" = "github" ] && [ "$REPO_PATTERN" = "dedicated" ]; then
+            printf '%s\n' \
+              '# Generated by udm-common setup:generate' \
+              '# Platform: GitHub Actions | Pattern: dedicated' \
+              '#' \
+              '# Instructions:' \
+              '#   1. Fill in all REPLACE_ME values below' \
+              '#   2. Add REGISTRY_USER_ID and REGISTRY_PASSWORD as GitHub Actions secrets' \
+              '#      (Settings > Secrets and variables > Actions)' \
+              '#   3. Run: uds run setup:validate' \
+              '#   4. Commit and push' \
+              '' \
+              'name: UDM Pipeline' \
+              '' \
+              'on:' \
+              '  workflow_dispatch:' \
+              '  push:' \
+              '    branches:' \
+              '      - main' \
+              '  pull_request:' \
+              '    branches:' \
+              '      - main' \
+              '' \
+              'jobs:' \
+              '  ci:' \
+              '    runs-on: ubuntu-latest' \
+              '    permissions:' \
+              '      contents: read' \
+              '      packages: write' \
+              '      id-token: write' \
+              '    steps:' \
+              '      - name: Checkout' \
+              '        # renovate: datasource=github-actions depName=actions/checkout' \
+              '        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0' \
+              '' \
+              '      - name: UDS CLI Setup' \
+              '        # renovate: datasource=github-releases depName=defenseunicorns-udm/udm-common' \
+              '        uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@TEMPLATE_VERSION' \
+              '' \
+              '      # Mints a short-lived .fulcio-token before Witness-attested steps.' \
+              '      - name: Generate Fulcio Token' \
+              '        run: |' \
+              '          uds run olm:generate-fulcio-token \' \
+              '            --with olm_cat="cat-api.uds-mil.us" \' \
+              '            --with olm_org="REPLACE_ME: your CAT organization name" \' \
+              '            --with github_token="PLACEHOLDER_GITHUB_TOKEN"' \
+              '' \
+              '      # attest:lint wraps your repo'\''s lint task with Witness. Define lint in tasks.yaml.' \
+              '      - name: Lint' \
+              '        run: uds run attest:lint' \
+              '' \
+              '      - name: Security Scan' \
+              '        run: |' \
+              '          uds run scan:security \' \
+              '            --with gitleaks_scan_path="." \' \
+              '            --with opengrep_scan_path="."' \
+              '' \
+              '      - name: Build' \
+              '        run: uds run build:zarf-package' \
+              '' \
+              '      - name: Vouch' \
+              '        run: |' \
+              '          uds run vouch:package \' \
+              '            --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \' \
+              '            --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \' \
+              '            --with olm_cat="cat-api.uds-mil.us" \' \
+              '            --with olm_org="REPLACE_ME: your CAT organization name"' \
+              '' \
+              '      - name: Publish' \
+              '        run: |' \
+              '          uds run publish:zarf-package \' \
+              '            --with registry_org="REPLACE_ME: your registry organization" \' \
+              '            --with registry_user_id="PLACEHOLDER_REGISTRY_USER_ID" \' \
+              '            --with registry_password="PLACEHOLDER_REGISTRY_PASSWORD"' \
+              > "$OUTPUT_FILE"
+            sed -i.bak \
+              -e "s|TEMPLATE_VERSION|${VERSION}|g" \
+              -e "s|PLACEHOLDER_GITHUB_TOKEN|${_GH}${_OB} secrets.GITHUB_TOKEN ${_CB}|g" \
+              -e "s|PLACEHOLDER_REGISTRY_USER_ID|${_GH}${_OB} secrets.REGISTRY_USER_ID ${_CB}|g" \
+              -e "s|PLACEHOLDER_REGISTRY_PASSWORD|${_GH}${_OB} secrets.REGISTRY_PASSWORD ${_CB}|g" \
+              "$OUTPUT_FILE"
+            rm -f "${OUTPUT_FILE}.bak"
+
+          elif [ "$PLATFORM" = "github" ] && [ "$REPO_PATTERN" = "mono" ]; then
+            printf '%s\n' \
+              '# Generated by udm-common setup:generate' \
+              '# Platform: GitHub Actions | Pattern: mono (existing CI repo)' \
+              '#' \
+              '# Instructions:' \
+              '#   1. Fill in all REPLACE_ME values below' \
+              '#   2. Add REGISTRY_USER_ID and REGISTRY_PASSWORD as GitHub Actions secrets' \
+              '#   3. Copy the '\''udm-pipeline'\'' job into your existing workflow file,' \
+              '#      OR save this as .github/workflows/udm.yaml with an '\''on:'\'' block' \
+              '#   4. Run: uds run setup:validate' \
+              '' \
+              'jobs:' \
+              '  udm-pipeline:' \
+              '    runs-on: ubuntu-latest' \
+              '    permissions:' \
+              '      contents: read' \
+              '      packages: write' \
+              '      id-token: write' \
+              '    steps:' \
+              '      - name: Checkout' \
+              '        # renovate: datasource=github-actions depName=actions/checkout' \
+              '        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0' \
+              '' \
+              '      - name: UDS CLI Setup' \
+              '        # renovate: datasource=github-releases depName=defenseunicorns-udm/udm-common' \
+              '        uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@TEMPLATE_VERSION' \
+              '' \
+              '      - name: Generate Fulcio Token' \
+              '        run: |' \
+              '          uds run olm:generate-fulcio-token \' \
+              '            --with olm_cat="cat-api.uds-mil.us" \' \
+              '            --with olm_org="REPLACE_ME: your CAT organization name" \' \
+              '            --with github_token="PLACEHOLDER_GITHUB_TOKEN"' \
+              '' \
+              '      - name: Lint' \
+              '        run: uds run attest:lint' \
+              '' \
+              '      - name: Security Scan' \
+              '        run: |' \
+              '          uds run scan:security \' \
+              '            --with gitleaks_scan_path="." \' \
+              '            --with opengrep_scan_path="."' \
+              '' \
+              '      - name: Build' \
+              '        run: uds run build:zarf-package' \
+              '' \
+              '      - name: Vouch' \
+              '        run: |' \
+              '          uds run vouch:package \' \
+              '            --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \' \
+              '            --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \' \
+              '            --with olm_cat="cat-api.uds-mil.us" \' \
+              '            --with olm_org="REPLACE_ME: your CAT organization name"' \
+              '' \
+              '      - name: Publish' \
+              '        run: |' \
+              '          uds run publish:zarf-package \' \
+              '            --with registry_org="REPLACE_ME: your registry organization" \' \
+              '            --with registry_user_id="PLACEHOLDER_REGISTRY_USER_ID" \' \
+              '            --with registry_password="PLACEHOLDER_REGISTRY_PASSWORD"' \
+              > "$OUTPUT_FILE"
+            sed -i.bak \
+              -e "s|TEMPLATE_VERSION|${VERSION}|g" \
+              -e "s|PLACEHOLDER_GITHUB_TOKEN|${_GH}${_OB} secrets.GITHUB_TOKEN ${_CB}|g" \
+              -e "s|PLACEHOLDER_REGISTRY_USER_ID|${_GH}${_OB} secrets.REGISTRY_USER_ID ${_CB}|g" \
+              -e "s|PLACEHOLDER_REGISTRY_PASSWORD|${_GH}${_OB} secrets.REGISTRY_PASSWORD ${_CB}|g" \
+              "$OUTPUT_FILE"
+            rm -f "${OUTPUT_FILE}.bak"
+
+          elif [ "$PLATFORM" = "gitlab" ] && [ "$REPO_PATTERN" = "dedicated" ]; then
+            printf '%s\n' \
+              '# Generated by udm-common setup:generate' \
+              '# Platform: GitLab CI | Pattern: dedicated' \
+              '#' \
+              '# Instructions:' \
+              '#   1. Copy this file to .gitlab-ci.yml (or merge into your existing pipeline)' \
+              '#   2. Fill in all REPLACE_ME values' \
+              '#   3. Set REGISTRY_USER_ID and REGISTRY_PASSWORD as masked CI/CD variables' \
+              '#      (Settings > CI/CD > Variables)' \
+              '#   4. Run: uds run setup:validate' \
+              '' \
+              'stages:' \
+              '  - ci' \
+              '  - publish' \
+              '' \
+              'variables:' \
+              '  # renovate: datasource=github-releases depName=defenseunicorns/uds-cli' \
+              '  UDS_VERSION: v0.33.0' \
+              '  OLM_CAT: cat-api.uds-mil.us' \
+              '  OLM_ORG: REPLACE_ME: your CAT organization name' \
+              '' \
+              '.uds-cache: &uds-cache' \
+              '  cache:' \
+              '    key: uds-${UDS_VERSION}' \
+              '    paths:' \
+              '      - .cache/uds-bin/' \
+              '' \
+              '.install-deps: &install-deps' \
+              '  - apt-get update -qq && apt-get install -y -qq curl' \
+              '  - mkdir -p .cache/uds-bin' \
+              '  - |' \
+              '    if [ ! -f ".cache/uds-bin/uds" ]; then' \
+              '      curl --retry-all-errors --retry 5 -fSL \' \
+              '        "https://github.com/defenseunicorns/uds-cli/releases/download/${UDS_VERSION}/uds-cli_${UDS_VERSION}_Linux_amd64" \' \
+              '        -o .cache/uds-bin/uds' \
+              '      chmod +x .cache/uds-bin/uds' \
+              '    fi' \
+              '    cp .cache/uds-bin/uds /usr/local/bin/uds' \
+              '' \
+              'ci:' \
+              '  stage: ci' \
+              '  <<: *uds-cache' \
+              '  image: ubuntu:latest' \
+              '  id_tokens:' \
+              '    OLM_ID_TOKEN:' \
+              '      aud: cat' \
+              '  before_script:' \
+              '    - *install-deps' \
+              '  script:' \
+              '    - |' \
+              '      uds run olm:generate-fulcio-token \' \
+              '        --with olm_cat="$OLM_CAT" \' \
+              '        --with olm_org="$OLM_ORG" \' \
+              '        --with olm_identity_token="$OLM_ID_TOKEN"' \
+              '    - uds run attest:lint' \
+              '    - |' \
+              '      uds run scan:security \' \
+              '        --with gitleaks_scan_path="." \' \
+              '        --with opengrep_scan_path="."' \
+              '  artifacts:' \
+              '    paths:' \
+              '      - lint-witness.json' \
+              '      - gitleaks-witness.json' \
+              '      - opengrep-witness.json' \
+              '      - gitleaks.sarif.json' \
+              '      - opengrep.sarif.json' \
+              '    when: always' \
+              '    expire_in: 1 day' \
+              '' \
+              'publish:' \
+              '  stage: publish' \
+              '  <<: *uds-cache' \
+              '  image: ubuntu:latest' \
+              '  id_tokens:' \
+              '    OLM_ID_TOKEN:' \
+              '      aud: cat' \
+              '  needs:' \
+              '    - job: ci' \
+              '      artifacts: true' \
+              '  before_script:' \
+              '    - *install-deps' \
+              '  script:' \
+              '    - |' \
+              '      uds run olm:generate-fulcio-token \' \
+              '        --with olm_cat="$OLM_CAT" \' \
+              '        --with olm_org="$OLM_ORG" \' \
+              '        --with olm_identity_token="$OLM_ID_TOKEN"' \
+              '    - uds run build:zarf-package' \
+              '    - |' \
+              '      uds run vouch:package \' \
+              '        --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \' \
+              '        --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \' \
+              '        --with olm_cat="$OLM_CAT" \' \
+              '        --with olm_org="$OLM_ORG" \' \
+              '        --with olm_identity_token="$OLM_ID_TOKEN"' \
+              '    - |' \
+              '      uds run publish:zarf-package \' \
+              '        --with registry="registry.uds-mil.us" \' \
+              '        --with registry_org="REPLACE_ME: your registry organization" \' \
+              '        --with registry_user_id="$REGISTRY_USER_ID" \' \
+              '        --with registry_password="$REGISTRY_PASSWORD"' \
+              > "$OUTPUT_FILE"
+
+          else
+            # gitlab + mono
+            printf '%s\n' \
+              '# Generated by udm-common setup:generate' \
+              '# Platform: GitLab CI | Pattern: mono (existing CI repo)' \
+              '#' \
+              '# Instructions:' \
+              '#   1. Merge the jobs below into your existing .gitlab-ci.yml' \
+              '#   2. Add '\''ci'\'' and '\''publish'\'' to your stages list' \
+              '#   3. Fill in all REPLACE_ME values' \
+              '#   4. Set REGISTRY_USER_ID and REGISTRY_PASSWORD as masked CI/CD variables' \
+              '#   5. Run: uds run setup:validate' \
+              '' \
+              '# Add to your variables: block' \
+              '# variables:' \
+              '#   renovate: datasource=github-releases depName=defenseunicorns/uds-cli' \
+              '#   UDS_VERSION: v0.33.0' \
+              '#   OLM_CAT: cat-api.uds-mil.us' \
+              '#   OLM_ORG: REPLACE_ME: your CAT organization name' \
+              '' \
+              '.udm-cache: &udm-cache' \
+              '  cache:' \
+              '    key: uds-${UDS_VERSION}' \
+              '    paths:' \
+              '      - .cache/uds-bin/' \
+              '' \
+              '.udm-install: &udm-install' \
+              '  - apt-get update -qq && apt-get install -y -qq curl' \
+              '  - mkdir -p .cache/uds-bin' \
+              '  - |' \
+              '    if [ ! -f ".cache/uds-bin/uds" ]; then' \
+              '      curl --retry-all-errors --retry 5 -fSL \' \
+              '        "https://github.com/defenseunicorns/uds-cli/releases/download/${UDS_VERSION}/uds-cli_${UDS_VERSION}_Linux_amd64" \' \
+              '        -o .cache/uds-bin/uds' \
+              '      chmod +x .cache/uds-bin/uds' \
+              '    fi' \
+              '    cp .cache/uds-bin/uds /usr/local/bin/uds' \
+              '' \
+              'udm-ci:' \
+              '  stage: ci' \
+              '  <<: *udm-cache' \
+              '  image: ubuntu:latest' \
+              '  id_tokens:' \
+              '    OLM_ID_TOKEN:' \
+              '      aud: cat' \
+              '  before_script:' \
+              '    - *udm-install' \
+              '  script:' \
+              '    - |' \
+              '      uds run olm:generate-fulcio-token \' \
+              '        --with olm_cat="$OLM_CAT" \' \
+              '        --with olm_org="$OLM_ORG" \' \
+              '        --with olm_identity_token="$OLM_ID_TOKEN"' \
+              '    - uds run attest:lint' \
+              '    - |' \
+              '      uds run scan:security \' \
+              '        --with gitleaks_scan_path="." \' \
+              '        --with opengrep_scan_path="."' \
+              '  artifacts:' \
+              '    paths:' \
+              '      - lint-witness.json' \
+              '      - gitleaks-witness.json' \
+              '      - opengrep-witness.json' \
+              '      - gitleaks.sarif.json' \
+              '      - opengrep.sarif.json' \
+              '    when: always' \
+              '    expire_in: 1 day' \
+              '' \
+              'udm-publish:' \
+              '  stage: publish' \
+              '  <<: *udm-cache' \
+              '  image: ubuntu:latest' \
+              '  id_tokens:' \
+              '    OLM_ID_TOKEN:' \
+              '      aud: cat' \
+              '  needs:' \
+              '    - job: udm-ci' \
+              '      artifacts: true' \
+              '  before_script:' \
+              '    - *udm-install' \
+              '  script:' \
+              '    - |' \
+              '      uds run olm:generate-fulcio-token \' \
+              '        --with olm_cat="$OLM_CAT" \' \
+              '        --with olm_org="$OLM_ORG" \' \
+              '        --with olm_identity_token="$OLM_ID_TOKEN"' \
+              '    - uds run build:zarf-package' \
+              '    - |' \
+              '      uds run vouch:package \' \
+              '        --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \' \
+              '        --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \' \
+              '        --with olm_cat="$OLM_CAT" \' \
+              '        --with olm_org="$OLM_ORG" \' \
+              '        --with olm_identity_token="$OLM_ID_TOKEN"' \
+              '    - |' \
+              '      uds run publish:zarf-package \' \
+              '        --with registry="registry.uds-mil.us" \' \
+              '        --with registry_org="REPLACE_ME: your registry organization" \' \
+              '        --with registry_user_id="$REGISTRY_USER_ID" \' \
+              '        --with registry_password="$REGISTRY_PASSWORD"' \
+              > "$OUTPUT_FILE"
+          fi
+
+          echo ""
+          echo "Generated: $OUTPUT_FILE"
+          echo ""
+          echo "Next steps:"
+          echo "  1. Replace all REPLACE_ME values in $OUTPUT_FILE"
+          echo "  2. Run: uds run setup:validate"
+          echo "  3. Commit and push"
+
+  - name: install-hooks
+    description: Install a pre-commit hook that blocks commits containing REPLACE_ME placeholders
+    actions:
+      - description: Write .git/hooks/pre-commit
+        shell:
+          linux: bash
+          darwin: bash
+        cmd: |
+          set -euo pipefail
+
+          HOOK_PATH=".git/hooks/pre-commit"
+
+          NEW_CONTENT=$(printf '%s\n' \
+            '#!/usr/bin/env bash' \
+            '# udm-common: block commits with unfilled REPLACE_ME placeholders' \
+            'staged_yaml=$(git diff --cached --name-only | grep -E '\''\.ya?ml$'\'' || true)' \
+            'if [ -z "$staged_yaml" ]; then' \
+            '  exit 0' \
+            'fi' \
+            'found=""' \
+            'while IFS= read -r f; do' \
+            '  if git show ":${f}" 2>/dev/null | grep -q '\''REPLACE_ME'\''; then' \
+            '    found="${found:+$found }$f"' \
+            '  fi' \
+            'done <<< "$staged_yaml"' \
+            'if [ -n "$found" ]; then' \
+            '  echo "BLOCKED: unfilled REPLACE_ME placeholders in staged YAML:"' \
+            '  for f in $found; do' \
+            '    echo "  $f"' \
+            '    git show ":${f}" | grep -n '\''REPLACE_ME'\'' | sed '\''s/^/    /'\''' \
+            '  done' \
+            '  echo ""' \
+            '  echo "Replace all REPLACE_ME values, then re-stage and commit."' \
+            '  echo "Run: uds run setup:validate  to check all placeholders."' \
+            '  exit 1' \
+            'fi')
+
+          if [ ! -d ".git" ]; then
+            echo "ERROR: .git directory not found. Run this from the repo root."
+            exit 1
+          fi
+
+          mkdir -p "$(dirname "$HOOK_PATH")"
+
+          if [ -f "$HOOK_PATH" ]; then
+            EXISTING=$(cat "$HOOK_PATH")
+            if [ "$EXISTING" = "$NEW_CONTENT" ]; then
+              echo "Pre-commit hook already installed (no changes)."
+              exit 0
+            else
+              echo "WARNING: a different pre-commit hook already exists at $HOOK_PATH."
+              echo "Skipping installation to avoid overwriting your existing hook."
+              echo "To add the REPLACE_ME check manually, see: uds run setup:install-hooks --help"
+              exit 0
+            fi
+          fi
+
+          printf '%s\n' "$NEW_CONTENT" > "$HOOK_PATH"
+          chmod +x "$HOOK_PATH"
+          echo "Pre-commit hook installed at $HOOK_PATH"
+          echo "Staged YAML files with REPLACE_ME placeholders will be blocked."
