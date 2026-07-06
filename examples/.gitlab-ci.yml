@@ -17,7 +17,7 @@ stages:
 
 variables:
   # renovate: datasource=github-releases depName=defenseunicorns/uds-cli
-  UDS_VERSION: v0.33.0
+  UDS_VERSION: v0.34.0
   OLM_CAT: cat-api.uds-mil.us
   OLM_ORG: <your-org-name>   # Replace with your CAT organization name (provided during onboarding)
 
