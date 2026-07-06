@@ -4,11 +4,77 @@ Shared UDS tasks for UDS Army customers. Provides a supply-chain-security
 pipeline that lints, scans, builds, vouches, and publishes Zarf packages to
 the UDS Army registry.
 
+## Quickstart
+
+### Phase 1 — wire up your `tasks.yaml`
+
+Install UDS CLI, then create a `tasks.yaml` at your repo root with the udm-common task includes and your own `lint` task. Copy [`examples/tasks.yaml`](examples/tasks.yaml) as a starting point.
+
+```yaml
+includes:
+  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/attest.yaml
+  - build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/build.yaml
+  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/olm.yaml
+  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/publish.yaml
+  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/scan.yaml
+  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/setup.yaml
+  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/vouch.yaml
+```
+
+Then run the prerequisite checker:
+
+```shell
+uds run setup:validate
+```
+
+This prints a `PASS`/`FAIL` checklist covering installed tools, signing credentials, and unfilled configuration placeholders. Fix any `FAIL` items before proceeding.
+
+> **Keep versions current:** use [Renovate](https://docs.renovatebot.com/) to auto-update the `udm-common` task include URLs. The inline `# renovate:` comments in the snippets above are already wired for Renovate's GitHub Releases datasource.
+
+### Phase 2 — generate your CI workflow
+
+Run the generator to produce a ready-to-use CI file for your platform:
+
+```shell
+# GitHub Actions
+uds run setup:generate --with platform=github
+
+# GitLab CI
+uds run setup:generate --with platform=gitlab
+```
+
+The generator writes a CI file (`.github/workflows/udm.yaml` for GitHub, `.gitlab-ci.yml` for GitLab) with `REPLACE_ME` placeholders for values that vary per ISV. The file includes **OPTION A / OPTION B** instructions at the top — follow Option A if you have no existing CI workflow, or Option B to merge the UDM jobs into an existing pipeline. Fill in the `REPLACE_ME` values, then commit and push.
+
+> **Prefer a guided walkthrough?** An AI assistant runbook (`.claude/skills/isv-setup/RUNBOOK.md`) automates Phase 2 end-to-end — it runs `setup:generate`, prompts for each `REPLACE_ME` value one at a time, then calls `setup:validate`. Works with any AI coding assistant:
+>
+> | Tool | How to invoke |
+> |------|--------------|
+> | **Claude Code** | Install once: `mkdir -p ~/.claude/skills/isv-setup && curl -fsSL https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/.claude/skills/isv-setup/SKILL.md -o ~/.claude/skills/isv-setup/SKILL.md && curl -fsSL https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/.claude/skills/isv-setup/RUNBOOK.md -o ~/.claude/skills/isv-setup/RUNBOOK.md` — then type `/isv-setup` |
+> | **GitHub Copilot** | `.github/copilot-instructions.md` is already wired — ask "set up my CI" |
+> | **Codex CLI** | `AGENTS.md` is already wired — ask "set up my CI" |
+
+To install a pre-commit hook that blocks commits with unfilled placeholders:
+
+```shell
+uds run setup:install-hooks
+```
+
+### Required `--with` parameter reference
+
+| Parameter | Task | Description | Where to get it |
+|-----------|------|-------------|-----------------|
+| `olm_org` | `olm:generate-fulcio-token`, `vouch:package` | Your CAT organization name | Provided by DU during onboarding |
+| `olm_cat` | `olm:generate-fulcio-token`, `vouch:package` | CAT API domain | `cat-api.uds-mil.us` (fixed) |
+| `olm_identity_token` | `olm:generate-fulcio-token`, `vouch:package` | GitLab OIDC token | GitLab only — `$OLM_ID_TOKEN` from `id_tokens` block |
+| `registry_org` | `publish:zarf-package` | Registry path prefix | Your organization path in `registry.uds-mil.us` |
+| `REGISTRY_USER_ID` | `publish:zarf-package` | Registry username | CI/CD secret — set in GitHub Actions / GitLab CI |
+| `REGISTRY_PASSWORD` | `publish:zarf-package` | Registry password | CI/CD secret — set in GitHub Actions / GitLab CI |
+
 ## Available Task Namespaces
 
 | Namespace | Tasks | Description |
 |-----------|-------|-------------|
-| `setup` | `uds-cli`, `cosign`, `witness` | Installs pipeline tooling |
+| `setup` | `uds-cli`, `cosign`, `witness`, `validate`, `generate`, `install-hooks` | Installs pipeline tooling and ISV onboarding helpers |
 | `attest` | `lint` | Wraps your `lint` task with Witness attestation |
 | `scan` | `security`, `gitleaks`, `opengrep` | Runs Gitleaks secrets scanning and OpenGrep SAST |
 | `build` | `zarf-package` | Builds a Zarf package under Witness attestation |
@@ -46,7 +112,7 @@ All tasks require the [UDS CLI](https://docs.defenseunicorns.com/cli/getting-sta
 
 ```shell
 # renovate: datasource=github-releases depName=defenseunicorns/uds-cli
-UDS_VERSION=v0.31.0
+UDS_VERSION=v0.33.0
 curl --retry-all-errors --retry 5 -fSL \
   "https://github.com/defenseunicorns/uds-cli/releases/download/${UDS_VERSION}/uds-cli_${UDS_VERSION}_Linux_amd64" \
   -o uds
@@ -56,72 +122,11 @@ sudo mv uds /usr/local/bin/uds
 
 See [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) for a complete GitLab install snippet with caching.
 
-> **Keep versions current:** use [Renovate](https://docs.renovatebot.com/) to auto-update both the UDS CLI version pin above and your `udm-common` task include URLs. The inline `# renovate:` comments in the snippets above and in `examples/` are already wired for Renovate's GitHub Releases datasource.
-
 ### Lint task
 
 **You must define a `lint` task** in your repo's `tasks.yaml` before using `attest:lint` — `attest:lint`
 calls it. See [`examples/tasks.yaml`](examples/tasks.yaml) for patterns covering Python, Go, TypeScript,
 and monorepos. For an overview of the UDS task runner format, see [Use UDS Runner](https://docs.defenseunicorns.com/cli/how-to-guides/use-uds-runner/).
-
-## Quickstart
-
-Include task namespaces from this repo in your `tasks.yaml`:
-
-```yaml
-includes:
-  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/attest.yaml
-  - build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/build.yaml
-  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/olm.yaml
-  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/publish.yaml
-  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/scan.yaml
-  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/setup.yaml
-  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/vouch.yaml
-
-```
-
-See [`examples/tasks.yaml`](examples/tasks.yaml) for a full starting point.
-
-### Minimal CI workflow (GitHub Actions)
-
-> **Note:** `build:zarf-package` and `vouch:package` are separate steps. Run build first, then vouch.
-
-```yaml
-jobs:
-  ci:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@503712b17ab2ef4a50ee521e881cb3d6259df993 # v0.13.3
-      - run: |
-          uds run olm:generate-fulcio-token \
-            --with olm_cat="cat-api.uds-mil.us" \
-            --with olm_org="<your-org-name>" \
-            --with github_token="${{ secrets.GITHUB_TOKEN }}"
-      - run: uds run attest:lint
-      - run: |
-          uds run scan:security \
-            --with gitleaks_scan_path="." \
-            --with opengrep_scan_path="."
-      - run: uds run build:zarf-package
-      - run: |
-          uds run vouch:package \
-            --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
-            --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
-            --with olm_cat="cat-api.uds-mil.us" \
-            --with olm_org="<your-org-name>"
-      - run: |
-          uds run publish:zarf-package \
-            --with registry_org="<your-org-name>" \
-            --with registry_user_id="${{ secrets.REGISTRY_USER_ID }}" \
-            --with registry_password="${{ secrets.REGISTRY_PASSWORD }}"
-```
-
-See [`examples/ci-example.yaml`](examples/ci-example.yaml) for a full annotated workflow.
 
 ### Monorepo
 
@@ -444,6 +449,73 @@ Then generate the Fulcio token before attested steps in each job:
 ```
 
 See [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) for a complete annotated pipeline.
+
+## Using AI Assistants
+
+Point any AI coding assistant (Claude Code, GitHub Copilot, Codex) at this repo — `AGENTS.md`, `CONTEXT.md`, and `.claude/skills/isv-setup/RUNBOOK.md` give it the context it needs to answer questions and run tasks on your behalf.
+
+Copy-paste any of these prompts to get started:
+
+**Get my application into CAT and start seeing findings (start here):**
+```
+Fetch https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/AGENTS.md
+and https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/CONTEXT.md
+for project context, then walk me through everything I need to do to get my
+application into CAT and start seeing findings — from wiring up tasks.yaml to
+getting my first pipeline run to complete. I have my CAT org name, registry
+credentials, and CI platform ready. Start by reading my repo to understand
+where I am, then tell me what's missing and guide me through each step.
+```
+
+**Guided CI setup (runs the full wizard):**
+```
+Follow the ISV CI setup runbook at .claude/skills/isv-setup/RUNBOOK.md
+```
+
+**Diagnose a failing pipeline step:**
+```
+Fetch https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/AGENTS.md
+and https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/CONTEXT.md
+for context, then help me diagnose this error from uds run vouch:package:
+
+[paste error output]
+```
+
+**Understand what a task does:**
+```
+Fetch https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/AGENTS.md
+and https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/CONTEXT.md,
+then explain what attest:lint does, why it's required, and what lint-witness.json contains.
+```
+
+**Check readiness before first pipeline run:**
+```
+Fetch https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/AGENTS.md
+for context, run `uds run setup:validate`, and help me fix any FAIL items.
+```
+
+**Troubleshoot a specific error:**
+```
+Fetch https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/AGENTS.md
+and https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/CONTEXT.md,
+then tell me what's wrong and how to fix it:
+
+[paste error]
+```
+
+**Understand the CAT/compliance flow:**
+```
+Fetch https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/CONTEXT.md
+and explain what happens after I run vouch:package — what gets submitted to CAT,
+who reviews it, and what I need to do next.
+```
+
+**Local pipeline run setup:**
+```
+Fetch https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/AGENTS.md
+and walk me through running the full pipeline locally, including generating a
+signing key and what credentials I'll need.
+```
 
 ## Examples
 

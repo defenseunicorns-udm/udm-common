@@ -1,38 +1,25 @@
 # Annotated GitLab CI example for UDM Common.
 #
-# Adapted from the public enxo/oootp GitLab pipeline:
-# https://gitlab.com/enxo/oootp/-/blob/feat/ci-workflow/.gitlab-ci.yml
-#
-# GitLab's default CI config filename is `.gitlab-ci.yml` at repo root.
-#
 # This pipeline produces signed evidence for lint, secret scan, SAST, and
 # package build; submits that evidence to CAT via `vouch:package`; then
-# optionally publishes the resulting Zarf package to an OCI registry.
+# publishes the resulting Zarf package to an OCI registry.
 #
 # Signing uses fulcio.uds-mil.us via a CAT-brokered token (not fulcio.sigstore.dev).
 # Each job that runs Witness-attested steps must generate its own .fulcio-token
 # via olm:generate-fulcio-token before those steps run.
 #
-# Project-specific values from enxo/oootp are called out inline. Replace them
-# before copying this file into another project.
+# Quickstart: run `uds run setup:generate --with platform=gitlab --with repo_pattern=dedicated`
+# to generate a ready-to-fill version of this file automatically.
 
 stages:
   - ci
   - publish
 
 variables:
-  # Generic: pin the UDS CLI version used by the pipeline.
   # renovate: datasource=github-releases depName=defenseunicorns/uds-cli
   UDS_VERSION: v0.34.0
-
-  # Generic: required when using the docker:dind service without TLS.
-  DOCKER_HOST: tcp://docker:2375
-  DOCKER_TLS_CERTDIR: ""
-
-  # Project-specific: enxo/oootp submits CAT evidence under this org.
-  # Replace with the CAT endpoint and organization for your project.
   OLM_CAT: cat-api.uds-mil.us
-  OLM_ORG: uds-army-demo
+  OLM_ORG: <your-org-name>   # Replace with your CAT organization name (provided during onboarding)
 
 .uds-cache: &uds-cache
   cache:
@@ -40,19 +27,10 @@ variables:
     paths:
       - .cache/uds-bin/
 
-# Generic: bootstrap runtime dependencies needed by these example jobs.
-# The udm-common setup tasks install Witness/cosign/OLM as needed; this block
-# only gets the runner to the point where it can run `uds`.
+# Bootstrap runtime dependencies. The udm-common setup tasks install
+# Witness/cosign/OLM as needed; this block only brings `uds` onto the runner.
 .install-deps: &install-deps
-  - apt-get update -qq && apt-get install -y -qq curl docker.io
-  - mkdir -p ~/.docker/cli-plugins
-  - |
-    BUILDX_VERSION=$(curl -fsSL https://api.github.com/repos/docker/buildx/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
-    curl --retry-all-errors --retry 5 -fsSL \
-      "https://github.com/docker/buildx/releases/download/${BUILDX_VERSION}/buildx-${BUILDX_VERSION}.linux-amd64" \
-      -o ~/.docker/cli-plugins/docker-buildx
-    chmod +x ~/.docker/cli-plugins/docker-buildx
-  - docker buildx version
+  - apt-get update -qq && apt-get install -y -qq curl
   - mkdir -p .cache/uds-bin
   - |
     if [ ! -f ".cache/uds-bin/uds" ]; then
@@ -67,11 +45,11 @@ ci:
   stage: ci
   <<: *uds-cache
 
-  # Project-specific: enxo/oootp is a Node/Turbo repo. Use an image that has
-  # the language/runtime your project's lint/build tasks require.
-  image: node:24
+  # Use an image that has the language/runtime your lint/build tasks require.
+  # Example: node:24 for Node.js, python:3.12 for Python, golang:1.22 for Go.
+  image: ubuntu:latest
 
-  # Generic: request a CAT-audience OIDC token for Fulcio signing via olm:generate-fulcio-token.
+  # Request a CAT-audience OIDC token for Fulcio signing via olm:generate-fulcio-token.
   # The token is written to .fulcio-token and read by Witness-attested tasks.
   id_tokens:
     OLM_ID_TOKEN:
@@ -81,11 +59,7 @@ ci:
     - *install-deps
 
   script:
-    # Project-specific: enxo/oootp needs npm dependencies before `uds run lint`
-    # because its lint task calls `npm run lint`, which calls Turbo.
-    - npm ci
-
-    # Generic: generate a Fulcio signing token via CAT before any Witness-attested step.
+    # Generate a Fulcio signing token via CAT before any Witness-attested step.
     # Token is written to .fulcio-token and read automatically by attest/scan/build tasks.
     - |
       uds run olm:generate-fulcio-token \
@@ -93,18 +67,17 @@ ci:
         --with olm_org="$OLM_ORG" \
         --with olm_identity_token="$OLM_ID_TOKEN"
 
-    # Generic: attest:lint wraps your repo's `lint` task with Witness.
+    # attest:lint wraps your repo's `lint` task with Witness.
     # Define that task in tasks.yaml; see examples/tasks.yaml.
     - uds run attest:lint
 
-    # Project-specific: enxo/oootp scans apps/. Replace with your source path.
+    # Adjust scan paths to match your source directory layout.
     - |
       uds run scan:security \
-        --with opengrep_scan_path=apps/ \
-        --with gitleaks_scan_path=apps/
+        --with opengrep_scan_path="." \
+        --with gitleaks_scan_path="."
 
-  # Generic: pass witness attestations and SARIF reports to the publish job so
-  # vouch:package can submit the full evidence set to CAT.
+  # Pass witness attestations and SARIF reports to the publish job.
   artifacts:
     paths:
       - lint-witness.json
@@ -119,19 +92,16 @@ publish:
   stage: publish
   <<: *uds-cache
 
-  # Project-specific: enxo/oootp uses Node for its build command.
-  image: node:24
+  # Use an image that has Docker available if your build requires it.
+  # For Zarf package builds that need Docker, add: services: [docker:dind]
+  image: ubuntu:latest
 
-  # Generic: OLM_ID_TOKEN authenticates to CAT to mint a Fulcio signing token
-  # and to authorize the vouch submission. Each job generates its own token —
-  # .fulcio-token from the ci job is not transferred (gitignored, separate runner).
+  # OLM_ID_TOKEN authenticates to CAT to mint a Fulcio signing token.
+  # Each job generates its own token — .fulcio-token from the ci job is
+  # not transferred (gitignored, separate runner).
   id_tokens:
     OLM_ID_TOKEN:
       aud: cat
-
-  services:
-    - name: docker:29-dind
-      command: --tls=false
 
   needs:
     - job: ci
@@ -142,8 +112,7 @@ publish:
     - *install-deps
 
   script:
-
-    # Generic: refresh the Fulcio token before the build step.
+    # Refresh the Fulcio token before the build step.
     # build:zarf-package can exceed 30 minutes; token is minted fresh here.
     - |
       uds run olm:generate-fulcio-token \
@@ -151,12 +120,8 @@ publish:
         --with olm_org="$OLM_ORG" \
         --with olm_identity_token="$OLM_ID_TOKEN"
 
-    # Project-specific: `uds run build-images` is an enxo/oootp build task.
-    # Replace build_command with your package build command, or omit it to use
-    # the default `uds zarf package create` behavior.
-    - |
-      uds run build:zarf-package \
-        --with build_command="uds run build-images"
+    # Pass build_command if your build requires steps beyond `uds zarf package create`.
+    - uds run build:zarf-package
 
     - |
       uds run vouch:package \
@@ -166,12 +131,11 @@ publish:
         --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
         --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json"
 
-    # Generic: publishing is independent from CAT/vouch compliance evidence.
-    # Configure REGISTRY_USER_ID and REGISTRY_PASSWORD as masked GitLab CI/CD
-    # variables, or set dry_run=true when no registry is available.
+    # REGISTRY_USER_ID and REGISTRY_PASSWORD must be set as masked CI/CD variables
+    # (Settings > CI/CD > Variables). REGISTRY_ORG is your organization path in registry.uds-mil.us.
     - |
       uds run publish:zarf-package \
         --with registry="registry.uds-mil.us" \
-        --with registry_org="$OLM_ORG" \
+        --with registry_org="<your-registry-org>" \
         --with registry_user_id="$REGISTRY_USER_ID" \
         --with registry_password="$REGISTRY_PASSWORD"
