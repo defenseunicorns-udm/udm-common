@@ -44,6 +44,17 @@ tasks:
           OLM_CAT="${{ .inputs.olm_cat }}"
           OLM_ORG="${{ .inputs.olm_org }}"
 
+          if [ -z "$OLM_CAT" ]; then
+            echo "No OLM_CAT configured. Skipping OLM vouch for local run."
+            exit 0
+          fi
+
+          if [ -z "$OLM_ORG" ]; then
+            echo "ERROR: olm_org is required when olm_cat is set."
+            echo "  Example: uds run vouch:package --with olm_org=<your-org-name>"
+            exit 1
+          fi
+
           PACKAGE="${{ .inputs.zarf_package }}"
           if [ -z "$PACKAGE" ]; then
             while IFS= read -r p; do
@@ -58,17 +69,6 @@ tasks:
           fi
           if [ ! -f "$PACKAGE" ]; then
             echo "Zarf package not found: $PACKAGE"
-            exit 1
-          fi
-
-          if [ -z "$OLM_CAT" ]; then
-            echo "No OLM_CAT configured. Skipping OLM vouch for local run."
-            exit 0
-          fi
-
-          if [ -z "$OLM_ORG" ]; then
-            echo "ERROR: olm_org is required when olm_cat is set."
-            echo "  Example: uds run vouch:package --with olm_org=<your-org-name>"
             exit 1
           fi
 
