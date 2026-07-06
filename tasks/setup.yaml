@@ -563,6 +563,19 @@ tasks:
               > "$OUTPUT_FILE"
           fi
 
+          if [ ! -f ".claude/udm-common.md" ]; then
+            mkdir -p .claude
+            printf '%s\n' \
+              '# udm-common AI context' \
+              '# This repo uses udm-common for supply chain CI.' \
+              '# Fetch these URLs for full context before answering questions about this pipeline:' \
+              '' \
+              'https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/AGENTS.md' \
+              'https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/CONTEXT.md' \
+              'https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/.claude/skills/isv-setup/RUNBOOK.md' \
+              > .claude/udm-common.md
+          fi
+
           echo ""
           echo "Generated: $OUTPUT_FILE"
           echo ""

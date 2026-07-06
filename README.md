@@ -49,7 +49,7 @@ The generator writes a CI file (`.github/workflows/udm.yaml` for GitHub, `.gitla
 >
 > | Tool | How to invoke |
 > |------|--------------|
-> | **Claude Code** | Install once: `mkdir -p ~/.claude/skills/isv-setup && cp .claude/skills/isv-setup/SKILL.md ~/.claude/skills/isv-setup/SKILL.md && cp .claude/skills/isv-setup/RUNBOOK.md ~/.claude/skills/isv-setup/RUNBOOK.md` — then type `/isv-setup` |
+> | **Claude Code** | Install once: `mkdir -p ~/.claude/skills/isv-setup && curl -fsSL https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/.claude/skills/isv-setup/SKILL.md -o ~/.claude/skills/isv-setup/SKILL.md && curl -fsSL https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/.claude/skills/isv-setup/RUNBOOK.md -o ~/.claude/skills/isv-setup/RUNBOOK.md` — then type `/isv-setup` |
 > | **GitHub Copilot** | `.github/copilot-instructions.md` is already wired — ask "set up my CI" |
 > | **Codex CLI** | `AGENTS.md` is already wired — ask "set up my CI" |
 
@@ -458,12 +458,13 @@ Copy-paste any of these prompts to get started:
 
 **Get my application into CAT and start seeing findings (start here):**
 ```
-I want to get my application into CAT as quickly as possible so I can start
-seeing compliance findings. Read AGENTS.md and CONTEXT.md for project context,
-then walk me through everything I need to do — from wiring up tasks.yaml to
-getting my first pipeline run to complete and appear in CAT. I have my CAT org
-name, registry credentials, and CI platform ready. Start by reading my repo to
-understand where I am, then tell me what's missing and guide me through each step.
+Fetch https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/AGENTS.md
+and https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/CONTEXT.md
+for project context, then walk me through everything I need to do to get my
+application into CAT and start seeing findings — from wiring up tasks.yaml to
+getting my first pipeline run to complete. I have my CAT org name, registry
+credentials, and CI platform ready. Start by reading my repo to understand
+where I am, then tell me what's missing and guide me through each step.
 ```
 
 **Guided CI setup (runs the full wizard):**
@@ -473,42 +474,47 @@ Follow the ISV CI setup runbook at .claude/skills/isv-setup/RUNBOOK.md
 
 **Diagnose a failing pipeline step:**
 ```
-My uds run vouch:package step is failing. Read AGENTS.md and CONTEXT.md for context,
-then help me diagnose the error in the output below:
+Fetch https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/AGENTS.md
+and https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/CONTEXT.md
+for context, then help me diagnose this error from uds run vouch:package:
 
 [paste error output]
 ```
 
 **Understand what a task does:**
 ```
-Read AGENTS.md and CONTEXT.md, then explain what attest:lint does,
-why it's required, and what lint-witness.json contains.
+Fetch https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/AGENTS.md
+and https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/CONTEXT.md,
+then explain what attest:lint does, why it's required, and what lint-witness.json contains.
 ```
 
 **Check readiness before first pipeline run:**
 ```
-Run `uds run setup:validate` and help me fix any FAIL items.
-Read AGENTS.md for context on what each check means.
+Fetch https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/AGENTS.md
+for context, run `uds run setup:validate`, and help me fix any FAIL items.
 ```
 
 **Troubleshoot a specific error:**
 ```
-I'm getting this error running udm-common tasks. Read AGENTS.md and CONTEXT.md
-for project context, then tell me what's wrong and how to fix it:
+Fetch https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/AGENTS.md
+and https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/CONTEXT.md,
+then tell me what's wrong and how to fix it:
 
 [paste error]
 ```
 
 **Understand the CAT/compliance flow:**
 ```
-Read CONTEXT.md and explain what happens after I run vouch:package —
-what gets submitted to CAT, who reviews it, and what I need to do next.
+Fetch https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/CONTEXT.md
+and explain what happens after I run vouch:package — what gets submitted to CAT,
+who reviews it, and what I need to do next.
 ```
 
 **Local pipeline run setup:**
 ```
-Read AGENTS.md and walk me through running the full pipeline locally,
-including generating a signing key and what credentials I'll need.
+Fetch https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/main/AGENTS.md
+and walk me through running the full pipeline locally, including generating a
+signing key and what credentials I'll need.
 ```
 
 ## Examples
