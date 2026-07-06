@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## External Documentation
+
+For UDS CLI, Zarf, UDS Core, and Defense Unicorns platform docs, fetch:
+**https://docs.defenseunicorns.com/llms.txt**
+
+For broader project context (troubleshooting, ISV onboarding, common questions), read `AGENTS.md`.
+For domain concepts (CAT, OLM, Chainloop, Witness, Fulcio, AO/ISSM roles), read `CONTEXT.md`.
+
 ## What This Repo Is
 
 Shared task library for ISV's onboarding into the UDS Army platform. Provides reusable Maru/UDS task namespaces that teams include in their own `tasks.yaml` to get a complete supply-chain-security pipeline: lint → scan → build → vouch → publish.

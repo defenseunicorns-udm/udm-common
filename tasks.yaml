@@ -197,104 +197,63 @@ tasks:
           rm -f gitleaks.sarif.json gitleaks-witness.json opengrep.sarif.json opengrep-witness.json
           echo "PASS: scan:security"
 
-          echo "==> Testing setup:generate (github + dedicated)"
+          echo "==> Testing setup:generate (github)"
           TMPDIR_GEN=$(mktemp -d)
           (
             cd "$TMPDIR_GEN"
             git init -q
             uds run setup:generate \
               --with platform=github \
-              --with repo_pattern=dedicated \
               --with version=v0.13.3
             test -f ".github/workflows/udm.yaml" || { echo "FAIL: .github/workflows/udm.yaml not created"; exit 1; }
-            grep -q '# renovate:' .github/workflows/udm.yaml || { echo "FAIL: no renovate comment in generated github dedicated file"; exit 1; }
-            grep -q 'REPLACE_ME' .github/workflows/udm.yaml || { echo "FAIL: no REPLACE_ME markers in generated github dedicated file"; exit 1; }
+            grep -q '# renovate:' .github/workflows/udm.yaml || { echo "FAIL: no renovate comment in generated github file"; exit 1; }
+            grep -q 'REPLACE_ME' .github/workflows/udm.yaml || { echo "FAIL: no REPLACE_ME markers in generated github file"; exit 1; }
+            grep -q 'OPTION A' .github/workflows/udm.yaml || { echo "FAIL: no OPTION A/B instructions in generated github file"; exit 1; }
           )
           rm -rf "$TMPDIR_GEN"
-          echo "PASS: setup:generate github+dedicated"
+          echo "PASS: setup:generate github"
 
-          echo "==> Testing setup:generate (github + mono)"
-          TMPDIR_GEN=$(mktemp -d)
-          (
-            cd "$TMPDIR_GEN"
-            git init -q
-            uds run setup:generate \
-              --with platform=github \
-              --with repo_pattern=mono \
-              --with version=v0.13.3
-            test -f "udm-ci-snippet.yaml" || { echo "FAIL: udm-ci-snippet.yaml not created"; exit 1; }
-            grep -q '# renovate:' udm-ci-snippet.yaml || { echo "FAIL: no renovate comment in generated github mono file"; exit 1; }
-            grep -q 'v0.13.3' udm-ci-snippet.yaml || { echo "FAIL: version not substituted in github+mono output"; exit 1; }
-          )
-          rm -rf "$TMPDIR_GEN"
-          echo "PASS: setup:generate github+mono"
-
-          echo "==> Testing setup:generate (gitlab + dedicated)"
+          echo "==> Testing setup:generate (gitlab)"
           TMPDIR_GEN=$(mktemp -d)
           (
             cd "$TMPDIR_GEN"
             git init -q
             uds run setup:generate \
               --with platform=gitlab \
-              --with repo_pattern=dedicated \
               --with version=v0.13.3
-            test -f "udm-ci-snippet.yaml" || { echo "FAIL: udm-ci-snippet.yaml not created for gitlab+dedicated"; exit 1; }
-            grep -q 'id_tokens:' udm-ci-snippet.yaml || { echo "FAIL: no id_tokens block in generated gitlab dedicated file"; exit 1; }
+            test -f ".gitlab-ci.yml" || { echo "FAIL: .gitlab-ci.yml not created"; exit 1; }
+            grep -q 'id_tokens:' .gitlab-ci.yml || { echo "FAIL: no id_tokens block in generated gitlab file"; exit 1; }
+            grep -q 'REPLACE_ME' .gitlab-ci.yml || { echo "FAIL: no REPLACE_ME markers in generated gitlab file"; exit 1; }
+            grep -q 'OPTION A' .gitlab-ci.yml || { echo "FAIL: no OPTION A/B instructions in generated gitlab file"; exit 1; }
           )
           rm -rf "$TMPDIR_GEN"
-          echo "PASS: setup:generate gitlab+dedicated"
-
-          echo "==> Testing setup:generate (gitlab + mono)"
-          TMPDIR_GEN=$(mktemp -d)
-          (
-            cd "$TMPDIR_GEN"
-            git init -q
-            uds run setup:generate \
-              --with platform=gitlab \
-              --with repo_pattern=mono \
-              --with version=v0.13.3
-            test -f "udm-ci-snippet.yaml" || { echo "FAIL: udm-ci-snippet.yaml not created for gitlab+mono"; exit 1; }
-          )
-          rm -rf "$TMPDIR_GEN"
-          echo "PASS: setup:generate gitlab+mono"
+          echo "PASS: setup:generate gitlab"
 
           echo "==> Testing setup:generate guard — missing platform"
           TMPDIR_GEN=$(mktemp -d)
           (
             cd "$TMPDIR_GEN"
             git init -q
-            OUTPUT=$(uds run setup:generate --with repo_pattern=dedicated 2>&1 || true)
+            OUTPUT=$(uds run setup:generate 2>&1 || true)
             echo "$OUTPUT" | grep -q 'platform' \
               || { echo "FAIL: missing platform guard did not mention 'platform'"; exit 1; }
           )
           rm -rf "$TMPDIR_GEN"
           echo "PASS: setup:generate platform guard"
 
-          echo "==> Testing setup:generate guard — missing repo_pattern"
-          TMPDIR_GEN=$(mktemp -d)
-          (
-            cd "$TMPDIR_GEN"
-            git init -q
-            OUTPUT=$(uds run setup:generate --with platform=github 2>&1 || true)
-            echo "$OUTPUT" | grep -q 'repo_pattern' \
-              || { echo "FAIL: missing repo_pattern guard did not mention 'repo_pattern'"; exit 1; }
-          )
-          rm -rf "$TMPDIR_GEN"
-          echo "PASS: setup:generate repo_pattern guard"
-
           echo "==> Testing setup:generate file-exists guard"
           TMPDIR_GEN=$(mktemp -d)
           (
             cd "$TMPDIR_GEN"
             git init -q
-            uds run setup:generate --with platform=github --with repo_pattern=mono --with version=v0.13.3
+            uds run setup:generate --with platform=github --with version=v0.13.3
             # Second run without force should fail
-            if uds run setup:generate --with platform=github --with repo_pattern=mono --with version=v0.13.3 2>/dev/null; then
+            if uds run setup:generate --with platform=github --with version=v0.13.3 2>/dev/null; then
               echo "FAIL: file-exists guard did not block overwrite"
               exit 1
             fi
             # Third run with force should succeed
-            uds run setup:generate --with platform=github --with repo_pattern=mono --with version=v0.13.3 --with force=true
+            uds run setup:generate --with platform=github --with version=v0.13.3 --with force=true
           )
           rm -rf "$TMPDIR_GEN"
           echo "PASS: setup:generate file-exists guard"

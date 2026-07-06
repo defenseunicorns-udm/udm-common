@@ -33,23 +33,25 @@ This prints a `PASS`/`FAIL` checklist covering installed tools, signing credenti
 
 ### Phase 2 — generate your CI workflow
 
-Run the generator to produce a ready-to-use CI file for your platform and repo type:
+Run the generator to produce a ready-to-use CI file for your platform:
 
 ```shell
-# GitHub Actions, dedicated UDS packaging repo
-uds run setup:generate --with platform=github --with repo_pattern=dedicated
+# GitHub Actions
+uds run setup:generate --with platform=github
 
-# GitHub Actions, UDS packaging in an existing mono repo
-uds run setup:generate --with platform=github --with repo_pattern=mono
-
-# GitLab CI, dedicated UDS packaging repo
-uds run setup:generate --with platform=gitlab --with repo_pattern=dedicated
-
-# GitLab CI, UDS packaging in an existing mono repo
-uds run setup:generate --with platform=gitlab --with repo_pattern=mono
+# GitLab CI
+uds run setup:generate --with platform=gitlab
 ```
 
-The generator writes a CI file (`.github/workflows/udm.yaml` for GitHub dedicated, `udm-ci-snippet.yaml` for all other patterns) with `REPLACE_ME` placeholders for values that vary per ISV. Fill in those values, commit, and push.
+The generator writes a CI file (`.github/workflows/udm.yaml` for GitHub, `.gitlab-ci.yml` for GitLab) with `REPLACE_ME` placeholders for values that vary per ISV. The file includes **OPTION A / OPTION B** instructions at the top — follow Option A if you have no existing CI workflow, or Option B to merge the UDM jobs into an existing pipeline. Fill in the `REPLACE_ME` values, then commit and push.
+
+> **Prefer a guided walkthrough?** An AI assistant runbook (`.claude/skills/isv-setup/RUNBOOK.md`) automates Phase 2 end-to-end — it runs `setup:generate`, prompts for each `REPLACE_ME` value one at a time, then calls `setup:validate`. Works with any AI coding assistant:
+>
+> | Tool | How to invoke |
+> |------|--------------|
+> | **Claude Code** | Install once: `mkdir -p ~/.claude/skills/isv-setup && cp .claude/skills/isv-setup/SKILL.md ~/.claude/skills/isv-setup/SKILL.md && cp .claude/skills/isv-setup/RUNBOOK.md ~/.claude/skills/isv-setup/RUNBOOK.md` — then type `/isv-setup` |
+> | **GitHub Copilot** | `.github/copilot-instructions.md` is already wired — ask "set up my CI" |
+> | **Codex CLI** | `AGENTS.md` is already wired — ask "set up my CI" |
 
 To install a pre-commit hook that blocks commits with unfilled placeholders:
 
@@ -447,6 +449,67 @@ Then generate the Fulcio token before attested steps in each job:
 ```
 
 See [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) for a complete annotated pipeline.
+
+## Using AI Assistants
+
+Point any AI coding assistant (Claude Code, GitHub Copilot, Codex) at this repo — `AGENTS.md`, `CONTEXT.md`, and `.claude/skills/isv-setup/RUNBOOK.md` give it the context it needs to answer questions and run tasks on your behalf.
+
+Copy-paste any of these prompts to get started:
+
+**Get my application into CAT and start seeing findings (start here):**
+```
+I want to get my application into CAT as quickly as possible so I can start
+seeing compliance findings. Read AGENTS.md and CONTEXT.md for project context,
+then walk me through everything I need to do — from wiring up tasks.yaml to
+getting my first pipeline run to complete and appear in CAT. I have my CAT org
+name, registry credentials, and CI platform ready. Start by reading my repo to
+understand where I am, then tell me what's missing and guide me through each step.
+```
+
+**Guided CI setup (runs the full wizard):**
+```
+Follow the ISV CI setup runbook at .claude/skills/isv-setup/RUNBOOK.md
+```
+
+**Diagnose a failing pipeline step:**
+```
+My uds run vouch:package step is failing. Read AGENTS.md and CONTEXT.md for context,
+then help me diagnose the error in the output below:
+
+[paste error output]
+```
+
+**Understand what a task does:**
+```
+Read AGENTS.md and CONTEXT.md, then explain what attest:lint does,
+why it's required, and what lint-witness.json contains.
+```
+
+**Check readiness before first pipeline run:**
+```
+Run `uds run setup:validate` and help me fix any FAIL items.
+Read AGENTS.md for context on what each check means.
+```
+
+**Troubleshoot a specific error:**
+```
+I'm getting this error running udm-common tasks. Read AGENTS.md and CONTEXT.md
+for project context, then tell me what's wrong and how to fix it:
+
+[paste error]
+```
+
+**Understand the CAT/compliance flow:**
+```
+Read CONTEXT.md and explain what happens after I run vouch:package —
+what gets submitted to CAT, who reviews it, and what I need to do next.
+```
+
+**Local pipeline run setup:**
+```
+Read AGENTS.md and walk me through running the full pipeline locally,
+including generating a signing key and what credentials I'll need.
+```
 
 ## Examples
 

@@ -1,6 +1,9 @@
 # Context
 
-This is the domain glossary for udm-common. Implementation details belong in code and ADRs, not here.
+Domain glossary for udm-common. Implementation details belong in code and ADRs, not here.
+
+For operational quick-reference (tasks, commands, troubleshooting), read `AGENTS.md`.
+For external UDS/DU platform documentation, fetch: **https://docs.defenseunicorns.com/llms.txt**
 
 ## Terms
 
