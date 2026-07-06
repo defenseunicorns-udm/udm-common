@@ -137,6 +137,7 @@ tasks:
         cmd: |
           set -euo pipefail
           export PATH="$HOME/.local/bin:$PATH"
+          REPO_TASKS="$(pwd)/tasks.yaml"
 
           echo "==> Testing setup:uds-cli"
           uds run setup:uds-cli
@@ -202,7 +203,7 @@ tasks:
           (
             cd "$TMPDIR_GEN"
             git init -q
-            uds run setup:generate \
+            uds run --file "$REPO_TASKS" setup:generate \
               --with platform=github \
               --with version=v0.13.3
             test -f ".github/workflows/udm.yaml" || { echo "FAIL: .github/workflows/udm.yaml not created"; exit 1; }
@@ -218,7 +219,7 @@ tasks:
           (
             cd "$TMPDIR_GEN"
             git init -q
-            uds run setup:generate \
+            uds run --file "$REPO_TASKS" setup:generate \
               --with platform=gitlab \
               --with version=v0.13.3
             test -f ".gitlab-ci.yml" || { echo "FAIL: .gitlab-ci.yml not created"; exit 1; }
@@ -234,7 +235,7 @@ tasks:
           (
             cd "$TMPDIR_GEN"
             git init -q
-            OUTPUT=$(uds run setup:generate 2>&1 || true)
+            OUTPUT=$(uds run --file "$REPO_TASKS" setup:generate 2>&1 || true)
             echo "$OUTPUT" | grep -q 'platform' \
               || { echo "FAIL: missing platform guard did not mention 'platform'"; exit 1; }
           )
@@ -246,14 +247,14 @@ tasks:
           (
             cd "$TMPDIR_GEN"
             git init -q
-            uds run setup:generate --with platform=github --with version=v0.13.3
+            uds run --file "$REPO_TASKS" setup:generate --with platform=github --with version=v0.13.3
             # Second run without force should fail
-            if uds run setup:generate --with platform=github --with version=v0.13.3 2>/dev/null; then
+            if uds run --file "$REPO_TASKS" setup:generate --with platform=github --with version=v0.13.3 2>/dev/null; then
               echo "FAIL: file-exists guard did not block overwrite"
               exit 1
             fi
             # Third run with force should succeed
-            uds run setup:generate --with platform=github --with version=v0.13.3 --with force=true
+            uds run --file "$REPO_TASKS" setup:generate --with platform=github --with version=v0.13.3 --with force=true
           )
           rm -rf "$TMPDIR_GEN"
           echo "PASS: setup:generate file-exists guard"
@@ -267,7 +268,7 @@ tasks:
           (
             cd "$TMPDIR_HOOK"
             git init -q
-            uds run setup:install-hooks
+            uds run --file "$REPO_TASKS" setup:install-hooks
             test -f ".git/hooks/pre-commit" || { echo "FAIL: .git/hooks/pre-commit not created"; exit 1; }
             test -x ".git/hooks/pre-commit" || { echo "FAIL: .git/hooks/pre-commit not executable"; exit 1; }
           )
@@ -279,9 +280,9 @@ tasks:
           (
             cd "$TMPDIR_HOOK"
             git init -q
-            uds run setup:install-hooks
+            uds run --file "$REPO_TASKS" setup:install-hooks
             CONTENT_BEFORE=$(cat .git/hooks/pre-commit)
-            uds run setup:install-hooks
+            uds run --file "$REPO_TASKS" setup:install-hooks
             CONTENT_AFTER=$(cat .git/hooks/pre-commit)
             [ "$CONTENT_BEFORE" = "$CONTENT_AFTER" ] || { echo "FAIL: hook content changed on second install"; exit 1; }
           )
@@ -298,7 +299,7 @@ tasks:
             echo 'echo "existing hook"' >> .git/hooks/pre-commit
             chmod +x .git/hooks/pre-commit
             EXISTING=$(cat .git/hooks/pre-commit)
-            uds run setup:install-hooks 2>&1 | grep -q 'WARNING\|Skipping' \
+            uds run --file "$REPO_TASKS" setup:install-hooks 2>&1 | grep -q 'WARNING\|Skipping' \
               || { echo "FAIL: no warning for existing different hook"; exit 1; }
             AFTER=$(cat .git/hooks/pre-commit)
             [ "$EXISTING" = "$AFTER" ] || { echo "FAIL: existing hook was overwritten"; exit 1; }
@@ -319,7 +320,7 @@ tasks:
             git init -q
             git config user.email "test@test.com"
             git config user.name "Test"
-            uds run setup:install-hooks
+            uds run --file "$REPO_TASKS" setup:install-hooks
             echo "olm_org: REPLACE_ME: your org" > udm-ci-snippet.yaml
             git add udm-ci-snippet.yaml
             if .git/hooks/pre-commit 2>/dev/null; then
@@ -337,7 +338,7 @@ tasks:
             git init -q
             git config user.email "test@test.com"
             git config user.name "Test"
-            uds run setup:install-hooks
+            uds run --file "$REPO_TASKS" setup:install-hooks
             echo "olm_org: my-org" > tasks.yaml
             git add tasks.yaml
             .git/hooks/pre-commit || { echo "FAIL: pre-commit hook blocked clean file"; exit 1; }
@@ -352,7 +353,7 @@ tasks:
             git init -q
             git config user.email "test@test.com"
             git config user.name "Test"
-            uds run setup:install-hooks
+            uds run --file "$REPO_TASKS" setup:install-hooks
             echo "some content" > README.md
             git add README.md
             .git/hooks/pre-commit || { echo "FAIL: pre-commit hook blocked commit with no staged YAML"; exit 1; }
@@ -365,7 +366,7 @@ tasks:
           (
             cd "$TMPDIR_GEN"
             git init -q
-            OUTPUT=$(uds run setup:generate \
+            OUTPUT=$(uds run --file "$REPO_TASKS" setup:generate\
               --with platform=invalid \
               --with repo_pattern=dedicated 2>&1 || true)
             echo "$OUTPUT" | grep -q "github\|gitlab" \
@@ -379,7 +380,7 @@ tasks:
           (
             cd "$TMPDIR_GEN"
             git init -q
-            OUTPUT=$(uds run setup:generate \
+            OUTPUT=$(uds run --file "$REPO_TASKS" setup:generate\
               --with platform=github \
               --with repo_pattern=invalid 2>&1 || true)
             echo "$OUTPUT" | grep -q "mono\|dedicated" \
@@ -393,7 +394,7 @@ tasks:
           (
             cd "$TMPDIR_GEN"
             git init -q
-            uds run setup:generate \
+            uds run --file "$REPO_TASKS" setup:generate \
               --with platform=github \
               --with repo_pattern=dedicated \
               --with version=v0.13.3
@@ -408,7 +409,7 @@ tasks:
           (
             cd "$TMPDIR_GEN"
             git init -q
-            uds run setup:generate \
+            uds run --file "$REPO_TASKS" setup:generate \
               --with platform=github \
               --with repo_pattern=dedicated \
               --with version=v0.13.3 \
@@ -425,7 +426,7 @@ tasks:
           TMPDIR_HOOK=$(mktemp -d)
           (
             cd "$TMPDIR_HOOK"
-            if uds run setup:install-hooks 2>/dev/null; then
+            if uds run --file "$REPO_TASKS" setup:install-hooks 2>/dev/null; then
               echo "FAIL: setup:install-hooks succeeded in non-git directory"
               exit 1
             fi
