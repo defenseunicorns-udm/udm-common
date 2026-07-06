@@ -367,28 +367,13 @@ tasks:
           (
             cd "$TMPDIR_GEN"
             git init -q
-            OUTPUT=$(uds run --file "$REPO_TASKS" setup:generate\
-              --with platform=invalid \
-              --with repo_pattern=dedicated 2>&1 || true)
+            OUTPUT=$(uds run --file "$REPO_TASKS" setup:generate \
+              --with platform=invalid 2>&1 || true)
             echo "$OUTPUT" | grep -q "github\|gitlab" \
               || { echo "FAIL: invalid platform guard did not mention 'github' or 'gitlab'"; exit 1; }
           )
           rm -rf "$TMPDIR_GEN"
           echo "PASS: setup:generate invalid platform value guard"
-
-          echo "==> Testing setup:generate guard — invalid repo_pattern value"
-          TMPDIR_GEN=$(mktemp -d)
-          (
-            cd "$TMPDIR_GEN"
-            git init -q
-            OUTPUT=$(uds run --file "$REPO_TASKS" setup:generate\
-              --with platform=github \
-              --with repo_pattern=invalid 2>&1 || true)
-            echo "$OUTPUT" | grep -q "mono\|dedicated" \
-              || { echo "FAIL: invalid repo_pattern guard did not mention 'mono' or 'dedicated'"; exit 1; }
-          )
-          rm -rf "$TMPDIR_GEN"
-          echo "PASS: setup:generate invalid repo_pattern value guard"
 
           echo "==> Testing setup:generate VERSION substitution in generated file"
           TMPDIR_GEN=$(mktemp -d)
@@ -397,7 +382,6 @@ tasks:
             git init -q
             uds run --file "$REPO_TASKS" setup:generate \
               --with platform=github \
-              --with repo_pattern=dedicated \
               --with version=v0.13.3
             grep -q 'v0.13.3' .github/workflows/udm.yaml \
               || { echo "FAIL: version v0.13.3 not found in generated file"; exit 1; }
@@ -412,7 +396,6 @@ tasks:
             git init -q
             uds run --file "$REPO_TASKS" setup:generate \
               --with platform=github \
-              --with repo_pattern=dedicated \
               --with version=v0.13.3 \
               --with output_file="custom-pipeline.yaml"
             test -f "custom-pipeline.yaml" \
