@@ -299,7 +299,8 @@ tasks:
             echo 'echo "existing hook"' >> .git/hooks/pre-commit
             chmod +x .git/hooks/pre-commit
             EXISTING=$(cat .git/hooks/pre-commit)
-            uds run --file "$REPO_TASKS" setup:install-hooks 2>&1 | grep -q 'WARNING\|Skipping' \
+            HOOK_OUT=$(uds run --file "$REPO_TASKS" setup:install-hooks 2>&1 || true)
+            echo "$HOOK_OUT" | grep -q 'WARNING\|Skipping' \
               || { echo "FAIL: no warning for existing different hook"; exit 1; }
             AFTER=$(cat .git/hooks/pre-commit)
             [ "$EXISTING" = "$AFTER" ] || { echo "FAIL: existing hook was overwritten"; exit 1; }
