@@ -2,7 +2,15 @@
 
 This is the domain glossary for udm-common. Implementation details belong in code and ADRs, not here.
 
+AI coding agents should read this glossary together with [`CLAUDE.md`](CLAUDE.md) or [`AGENTS.md`](AGENTS.md). The guidance is shared across Claude Code, OpenAI Codex, and other agents; the filename used to load the instructions does not change the project rules.
+
 ## Terms
+
+### AI Agent
+An AI-assisted coding tool that reads repository instructions, inspects the codebase, and proposes or applies changes. This repository supports Claude Code, OpenAI Codex, and other agents that honor `AGENTS.md` or `CLAUDE.md`.
+
+### Repository Instructions
+The checked-in guidance that agents must follow while working here. `CLAUDE.md` contains the shared repository instructions for compatibility with Claude Code; `AGENTS.md` is the OpenAI Codex and agent entrypoint. Both point agents to this glossary.
 
 ### Consumer (ISV)
 A team or organization of engineers building an application to be onboarded into the DSOP. In CAT, consumers are called **ISVs** (Independent Software Vendors). Maps one-to-one with an **Organization** in CAT. CI/CD provider (GitHub Actions, GitLab, other) is irrelevant — consumers use these tasks regardless of provider.

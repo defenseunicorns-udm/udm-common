@@ -454,3 +454,11 @@ See the [`examples/`](examples/) directory for copy-paste starting points:
 | [`examples/ci-example.yaml`](examples/ci-example.yaml) | Full annotated GitHub Actions workflow |
 | [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) | Full annotated GitLab CI pipeline |
 | [`examples/tasks.yaml`](examples/tasks.yaml) | Starter `tasks.yaml` with common lint patterns |
+
+## Contributor and AI Agent Guidance
+
+Repository instructions are shared across Claude Code, OpenAI Codex, and other AI coding agents:
+
+- [`AGENTS.md`](AGENTS.md) — OpenAI Codex and agent entrypoint
+- [`CLAUDE.md`](CLAUDE.md) — shared commands, architecture, and development guidance
+- [`CONTEXT.md`](CONTEXT.md) — domain glossary and terminology
