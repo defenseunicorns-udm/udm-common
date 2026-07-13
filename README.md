@@ -39,7 +39,7 @@ All tasks require the [UDS CLI](https://docs.defenseunicorns.com/cli/getting-sta
 **GitHub Actions** — use the bundled setup action (already included in [`examples/ci-example.yaml`](examples/ci-example.yaml)):
 
 ```yaml
-- uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@503712b17ab2ef4a50ee521e881cb3d6259df993 # v0.13.3
+- uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@9238b820485411b19d3511a749cd1482afba4302 # v0.13.4
 ```
 
 **Other CI / local** — download the binary directly:
@@ -70,13 +70,13 @@ Include task namespaces from this repo in your `tasks.yaml`:
 
 ```yaml
 includes:
-  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/attest.yaml
-  - build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/build.yaml
-  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/olm.yaml
-  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/publish.yaml
-  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/scan.yaml
-  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/setup.yaml
-  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/vouch.yaml
+  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/attest.yaml
+  - build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/build.yaml
+  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/olm.yaml
+  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/publish.yaml
+  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/scan.yaml
+  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/setup.yaml
+  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/vouch.yaml
 
 ```
 
@@ -96,7 +96,7 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@503712b17ab2ef4a50ee521e881cb3d6259df993 # v0.13.3
+      - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@9238b820485411b19d3511a749cd1482afba4302 # v0.13.4
       - run: |
           uds run olm:generate-fulcio-token \
             --with olm_cat="cat-api.uds-mil.us" \
@@ -378,13 +378,13 @@ Include all task namespaces in your repo's `tasks.yaml`:
 
 ```yaml
 includes:
-  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/attest.yaml
-  - build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/build.yaml
-  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/olm.yaml
-  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/publish.yaml
-  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/scan.yaml
-  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/setup.yaml
-  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/vouch.yaml
+  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/attest.yaml
+  - build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/build.yaml
+  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/olm.yaml
+  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/publish.yaml
+  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/scan.yaml
+  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/setup.yaml
+  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/vouch.yaml
 ```
 
 ## Migrating from v0.11.x to v0.12.x
@@ -397,7 +397,7 @@ v0.12 replaces direct Sigstore OIDC signing (`fulcio.sigstore.dev`) with CAT-bro
 
 ```yaml
 includes:
-  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/olm.yaml
+  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/olm.yaml
 ```
 
 **2. Remove `fulcio_oidc_issuer` from all task calls.** The parameter no longer exists. Remove any `--with fulcio_oidc_issuer=...` from `attest:lint`, `scan:security`, `scan:gitleaks`, `scan:opengrep`, and `build:zarf-package` calls.
