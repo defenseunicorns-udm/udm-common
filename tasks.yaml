@@ -264,6 +264,9 @@ tasks:
       extra_attestations:
         description: Comma-separated list of additional witness JSON attestation files to include in vouch
         default: ""
+      opengrep_excludes:
+        description: Comma-separated list of paths to exclude from the OpenGrep scan. Uses gitignore glob syntax. Defaults to .fulcio-token to prevent the Sigstore token from appearing in SARIF findings.
+        default: .fulcio-token
     actions:
       - description: Run security scans then vouch for Zarf package
         shell:
@@ -271,6 +274,7 @@ tasks:
           darwin: bash
         cmd: |
           set -euo pipefail
+          trap 'rm -f .fulcio-token' EXIT
           export PATH="$HOME/.local/bin:$PATH"
 
           EXTRA_ATTESTATIONS="${{ .inputs.extra_attestations }}"
@@ -295,6 +299,7 @@ tasks:
             --with gitleaks_scan_path="${{ .inputs.gitleaks_scan_path }}" \
             --with opengrep_scan_path="${{ .inputs.opengrep_scan_path }}" \
             --with run_opengrep="${{ .inputs.run_opengrep }}" \
+            --with opengrep_excludes="${{ .inputs.opengrep_excludes }}" \
             --with witness_key_path="$WITNESS_KEY_PATH" \
             --with witness_workingdir="$WITNESS_WORKINGDIR" \
             --with enable_sigstore="${{ .inputs.enable_sigstore }}" \
@@ -413,6 +418,9 @@ tasks:
       test_directory:
         description: Path to the test directory to pass to olm vouch. Leave empty to skip.
         default: tests
+      opengrep_excludes:
+        description: Comma-separated list of paths to exclude from the OpenGrep scan. Uses gitignore glob syntax. Defaults to .fulcio-token to prevent the Sigstore token from appearing in SARIF findings.
+        default: .fulcio-token
     actions:
       - description: Run full pipeline - scan, vouch, publish
         shell:
@@ -420,6 +428,7 @@ tasks:
           darwin: bash
         cmd: |
           set -euo pipefail
+          trap 'rm -f .fulcio-token' EXIT
           export PATH="$HOME/.local/bin:$PATH"
 
           WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
@@ -465,6 +474,7 @@ tasks:
             --with architecture="${{ .inputs.architecture }}"
             --with test_directory="${{ .inputs.test_directory }}"
             --with extra_attestations="lint-witness.json"
+            --with opengrep_excludes="${{ .inputs.opengrep_excludes }}"
           )
           if [ -n "$ZARF_FLAVOR" ]; then
             PIPELINE_ARGS+=(--with zarf_flavor="$ZARF_FLAVOR")

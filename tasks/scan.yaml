@@ -242,6 +242,9 @@ tasks:
       fulcio_url:
         description: Fulcio instance URL for keyless Witness signing. Defaults to the production CAT Fulcio; override per environment, e.g. https://fulcio.uds.run for staging.
         default: https://fulcio.uds-mil.us
+      opengrep_excludes:
+        description: Comma-separated list of paths to exclude from the OpenGrep scan. Uses gitignore glob syntax. Defaults to .fulcio-token to prevent the Sigstore token from appearing in SARIF findings.
+        default: .fulcio-token
     actions:
       - description: Install tools and run attested OpenGrep scan
         shell:
@@ -259,6 +262,7 @@ tasks:
           fi
 
           OPENGREP_SCAN_PATH="${{ .inputs.opengrep_scan_path }}"
+          OPENGREP_EXCLUDES="${{ .inputs.opengrep_excludes }}"
           WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
           WITNESS_WORKINGDIR="${{ .inputs.witness_workingdir }}"
           ENABLE_SIGSTORE="${{ .inputs.enable_sigstore }}"
@@ -270,6 +274,14 @@ tasks:
 
           # Base OpenGrep Command
           OPENGREP_CMD=(opengrep scan "$OPENGREP_SCAN_PATH" --sarif-output "$OPENGREP_SARIF")
+          if [ -n "$OPENGREP_EXCLUDES" ]; then
+            IFS=',' read -ra EXCLUDE_LIST <<< "$OPENGREP_EXCLUDES"
+            for excl in "${EXCLUDE_LIST[@]}"; do
+              excl="${excl#"${excl%%[![:space:]]*}"}"  # trim leading whitespace
+              excl="${excl%"${excl##*[![:space:]]}"}"  # trim trailing whitespace
+              [ -n "$excl" ] && OPENGREP_CMD+=(--exclude "$excl")
+            done
+          fi
           rm -f "$OPENGREP_WITNESS"
 
           WITNESS_ARGS=(-a=environment -a=git)
@@ -337,6 +349,9 @@ tasks:
       run_opengrep:
         description: Whether to run OpenGrep SAST. Set to false to skip.
         default: "true"
+      opengrep_excludes:
+        description: Comma-separated list of paths to exclude from the OpenGrep scan. Uses gitignore glob syntax. Defaults to .fulcio-token to prevent the Sigstore token from appearing in SARIF findings.
+        default: .fulcio-token
     actions:
       - description: Run Gitleaks and optionally OpenGrep with Witness attestation
         shell:
@@ -350,6 +365,7 @@ tasks:
           GITLEAKS_SCAN_PATH="${{ .inputs.gitleaks_scan_path }}"
           OPENGREP_VERSION="${{ .inputs.opengrep_version }}"
           OPENGREP_SCAN_PATH="${{ .inputs.opengrep_scan_path }}"
+          OPENGREP_EXCLUDES="${{ .inputs.opengrep_excludes }}"
           WITNESS_KEY_PATH="${{ .inputs.witness_key_path }}"
           WITNESS_WORKINGDIR="${{ .inputs.witness_workingdir }}"
           ENABLE_SIGSTORE="${{ .inputs.enable_sigstore }}"
@@ -376,6 +392,7 @@ tasks:
             )
             [ -n "$WITNESS_KEY_PATH" ] && OPENGREP_OPTS+=(--with witness_key_path="$WITNESS_KEY_PATH")
             [ -n "$WITNESS_WORKINGDIR" ] && OPENGREP_OPTS+=(--with witness_workingdir="$WITNESS_WORKINGDIR")
+            [ -n "$OPENGREP_EXCLUDES" ] && OPENGREP_OPTS+=(--with opengrep_excludes="$OPENGREP_EXCLUDES")
             uds run scan:opengrep "${OPENGREP_OPTS[@]}"
           fi
 
