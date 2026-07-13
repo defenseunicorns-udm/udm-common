@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.13.4](https://github.com/defenseunicorns-udm/udm-common/compare/v0.13.3...v0.13.4) (2026-07-13)
+
+
+### Bug Fixes
+
+* Fulcio token opengrep exclusion ([#131](https://github.com/defenseunicorns-udm/udm-common/issues/131)) ([02065f4](https://github.com/defenseunicorns-udm/udm-common/commit/02065f4d744d00ca7d35682c1d8a0c79e2d9634e))
+
 ## [0.13.3](https://github.com/defenseunicorns-udm/udm-common/compare/v0.13.2...v0.13.3) (2026-06-29)
 
 
