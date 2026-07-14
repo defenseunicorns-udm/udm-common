@@ -1,6 +1,8 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Shared instructions for AI coding agents working in this repository. Claude Code reads this file directly; OpenAI Codex and other agents should read [`AGENTS.md`](AGENTS.md), which points here and to the domain glossary in [`CONTEXT.md`](CONTEXT.md).
+
+Agents must preserve existing user changes, keep secrets out of files and output, and verify documentation or code changes with the narrowest relevant checks. Ask before making destructive changes, changing security behavior, or expanding task scope.
 
 ## What This Repo Is
 
@@ -66,11 +68,11 @@ Each step produces a signed **in-toto attestation** (`*-witness.json`). In CI, s
 Teams add to their own `tasks.yaml`:
 ```yaml
 includes:
-  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/attest.yaml
-  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/scan.yaml
-  - build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/build.yaml
-  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/vouch.yaml
-  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.10.3/tasks/publish.yaml
+  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/attest.yaml
+  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/scan.yaml
+  - build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/build.yaml
+  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/vouch.yaml
+  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/publish.yaml
 ```
 
 Consumers **must** define a `lint` task — `attest:lint` calls it internally.
