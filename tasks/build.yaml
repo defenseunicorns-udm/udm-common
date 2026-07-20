@@ -96,7 +96,7 @@ tasks:
           fi
 
           if [ "$SHOULD_WITNESS" = "true" ]; then
-            uds run setup:witness
+            uds run setup:witness --no-progress
             WITNESS_ARGS+=(--enable-archivista="$ENABLE_ARCHIVISTA")
             witness run "${WITNESS_ARGS[@]}" -s=zarf-create --outfile="$ZARF_CREATE_WITNESS" -- "${ZARF_CMD[@]}"
           else

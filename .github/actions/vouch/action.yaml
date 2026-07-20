@@ -86,7 +86,7 @@ runs:
           VOUCH_ARGS+=(--with zarf_flavor="${{ inputs.zarf-flavor }}")
         fi
 
-        (cd "$UDM_ROOT" && uds run vouch:package "${VOUCH_ARGS[@]}")
+        (cd "$UDM_ROOT" && uds run vouch:package --no-progress "${VOUCH_ARGS[@]}")
 
         mv "$UDM_ROOT"/zarf-package-*.tar.zst "$GITHUB_WORKSPACE/"
         if [[ -f "$UDM_ROOT/zarf-create-witness.json" ]]; then

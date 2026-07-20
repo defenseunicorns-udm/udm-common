@@ -24,7 +24,7 @@ jobs:
         uses: ./.github/actions/uds-cli-setup
 
       - name: Run task integration tests
-        run: uds run test
+        run: uds run test --no-progress
 
   scan-vouch-publish:
     runs-on: ubuntu-latest
@@ -42,17 +42,17 @@ jobs:
 
       - name: Generate Fulcio Token
         run: |
-          uds run olm:generate-fulcio-token \
+          uds run olm:generate-fulcio-token --no-progress \
             --with olm_cat="cat-api.uds-mil.us" \
             --with olm_org="${{ secrets.OLM_ORG }}" \
             --with github_token="${{ secrets.GITHUB_TOKEN }}"
 
       - name: Witness Run Lint
-        run: uds run attest:lint
+        run: uds run attest:lint --no-progress
 
       - name: Security Scan
         run: |
-          uds run scan:security \
+          uds run scan:security --no-progress \
             --with opengrep_scan_path=src/ \
             --with gitleaks_scan_path=src/
 
@@ -61,17 +61,17 @@ jobs:
 
       - name: Refresh Fulcio Token
         run: |
-          uds run olm:generate-fulcio-token \
+          uds run olm:generate-fulcio-token --no-progress \
             --with olm_cat="cat-api.uds-mil.us" \
             --with olm_org="${{ secrets.OLM_ORG }}" \
             --with github_token="${{ secrets.GITHUB_TOKEN }}"
 
       - name: Build Zarf Package
-        run: uds run build:zarf-package
+        run: uds run build:zarf-package --no-progress
 
       - name: Vouch Zarf Package via OLM
         run: |
-          uds run vouch:package \
+          uds run vouch:package --no-progress \
             --with olm_cat="cat-api.uds-mil.us" \
             --with olm_org="${{ secrets.OLM_ORG }}" \
             --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
@@ -79,7 +79,7 @@ jobs:
 
       - name: Publish Zarf Package to Registry
         run: |
-          uds run publish:zarf-package \
+          uds run publish:zarf-package --no-progress \
             --with registry_org="${{ secrets.REGISTRY_ORG }}" \
             --with registry_user_id="${{ secrets.REGISTRY_USER_ID }}" \
             --with registry_password="${{ secrets.REGISTRY_PASSWORD }}"
