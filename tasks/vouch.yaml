@@ -130,7 +130,7 @@ tasks:
             OLM_ARGS+=(--uds-bundle "$UDS_BUNDLE")
           fi
           echo "====== Installing OLM CLI plugin ======"
-          uds run olm:setup
+          uds run olm:setup --no-progress
           echo "====== Running OLM vouch $(./olm version) ======"
 
           ./olm vouch "$PACKAGE" \

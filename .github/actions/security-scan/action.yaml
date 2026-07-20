@@ -46,7 +46,7 @@ runs:
         GITLEAKS_BASE="${GITHUB_BASE_REF:-${GITHUB_REF_NAME:-main}}"
         git -C "$GITHUB_WORKSPACE" fetch --depth=1 origin "$GITLEAKS_BASE" 2>/dev/null || true
 
-        (cd "$UDM_ROOT" && uds run scan:security \
+        (cd "$UDM_ROOT" && uds run scan:security --no-progress \
           --with run_opengrep="${{ inputs.run-opengrep }}" \
           --with gitleaks_scan_path="$GITHUB_WORKSPACE" \
           --with opengrep_scan_path="$GITHUB_WORKSPACE/${{ inputs.opengrep-scan-path }}" \

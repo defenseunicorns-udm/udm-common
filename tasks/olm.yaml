@@ -82,7 +82,7 @@ tasks:
           fi
           [ -z "$OLM_PROJECT" ] && OLM_PROJECT="$OLM_ORG"
 
-          uds run olm:setup --with github_token="${{ .inputs.github_token }}"
+          uds run olm:setup --with github_token="${{ .inputs.github_token }}" --no-progress
 
           ARGS=(
             tools generate-fulcio-token

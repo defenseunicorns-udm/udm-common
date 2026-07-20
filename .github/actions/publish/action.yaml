@@ -30,7 +30,7 @@ runs:
         # Copy the package to the udm-common root so the publish task can find it.
         cp zarf-package-*.tar.zst "$UDM_ROOT/"
 
-        (cd "$UDM_ROOT" && uds run publish:zarf-package \
+        (cd "$UDM_ROOT" && uds run publish:zarf-package --no-progress \
           --with registry="${{ inputs.registry }}" \
           --with registry_org="${{ inputs.registry-org }}" \
           --with registry_user_id="${{ inputs.registry-user-id }}" \
