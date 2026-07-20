@@ -59,7 +59,7 @@ tasks:
       version:
         description: Version of cosign to install (no v prefix)
         # renovate: datasource=github-releases depName=sigstore/cosign extractVersion=^v(?<version>.+)$
-        default: 2.6.4
+        default: 3.1.1
     actions:
       - description: Install cosign
         shell:
@@ -107,7 +107,7 @@ tasks:
       cosign_version:
         description: Version of cosign to install if not already on PATH (no v prefix)
         # renovate: datasource=github-releases depName=sigstore/cosign extractVersion=^v(?<version>.+)$
-        default: 2.6.4
+        default: 3.1.1
     actions:
       - description: Ensure cosign is available, then download and verify witness
         shell:

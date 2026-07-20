@@ -58,9 +58,9 @@ tasks:
           fi
 
           if [ "$SHOULD_WITNESS" = "true" ]; then
-            uds run setup:witness
-            witness run "${WITNESS_ARGS[@]}" -s=lint --outfile="$LINT_WITNESS" -- uds run lint
+            uds run setup:witness --no-progress
+            witness run "${WITNESS_ARGS[@]}" -s=lint --outfile="$LINT_WITNESS" -- uds run lint --no-progress
           else
             echo "Sigstore disabled. Running lint without Witness attestation."
-            uds run lint
+            uds run lint --no-progress
           fi
