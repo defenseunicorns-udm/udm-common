@@ -95,7 +95,7 @@ jobs:
       packages: write
       id-token: write
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@9238b820485411b19d3511a749cd1482afba4302 # v0.13.4
       - run: |
           uds run olm:generate-fulcio-token \
