@@ -5,7 +5,7 @@ inputs:
   version:
     description: Version of UDS CLI to install
     # renovate: datasource=github-releases depName=defenseunicorns/uds-cli
-    default: v0.34.3
+    default: v0.35.1
 
 runs:
   using: composite
