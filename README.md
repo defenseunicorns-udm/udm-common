@@ -1,8 +1,8 @@
 # udm-common
 
-Shared UDS tasks for UDS Army customers. Provides a supply-chain-security
+Shared UDS tasks for UDS Proving Ground customers. Provides a supply-chain-security
 pipeline that lints, scans, builds, vouches, and publishes Zarf packages to
-the UDS Army registry.
+the UDS Proving Ground registry.
 
 ## Available Task Namespaces
 
@@ -23,12 +23,12 @@ Every package goes through these stages in order:
 1. **Lint** — `attest:lint` runs your repo's `lint` task and signs the result
 2. **Scan** — `scan:security` runs Gitleaks (secrets) and OpenGrep (SAST) and signs each result
 3. **Build + Vouch** — `build:zarf-package` builds the Zarf package; `vouch:package` submits signed attestations to OLM/CAT
-4. **Publish** — `publish:zarf-package` pushes the package to the UDS Army registry
+4. **Publish** — `publish:zarf-package` pushes the package to the UDS Proving Ground registry
 
 > **Tooling glossary**
 > - **Witness** — signs each pipeline step, producing `.json` attestation files as evidence
 > - **CAT / Fulcio** — CAT-brokered keyless signing; `olm:generate-fulcio-token` mints a short-lived token from `fulcio.uds-mil.us` before any Witness-attested step. No stored key needed in CI.
-> - **OLM / CAT** — UDS Army compliance tracking; receives signed attestations during `vouch`
+> - **OLM / CAT** — UDS Proving Ground compliance tracking; receives signed attestations during `vouch`
 
 ## Prerequisites
 
@@ -46,7 +46,7 @@ All tasks require the [UDS CLI](https://docs.defenseunicorns.com/cli/getting-sta
 
 ```shell
 # renovate: datasource=github-releases depName=defenseunicorns/uds-cli
-UDS_VERSION=v0.31.0
+UDS_VERSION=v0.36.0
 curl --retry-all-errors --retry 5 -fSL \
   "https://github.com/defenseunicorns/uds-cli/releases/download/${UDS_VERSION}/uds-cli_${UDS_VERSION}_Linux_amd64" \
   -o uds
@@ -113,7 +113,9 @@ jobs:
             --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
             --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
             --with olm_cat="cat-api.uds-mil.us" \
-            --with olm_org="<your-org-name>"
+            --with olm_org="<your-org-name>" \
+            --with uds_bundle="<path-to-uds-bundle.yaml>"
+
       - run: |
           uds run publish:zarf-package \
             --with registry_org="<your-org-name>" \
@@ -146,7 +148,8 @@ jobs:
             --with attestations="gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
             --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
             --with olm_cat="cat-api.uds-mil.us" \
-            --with olm_org="<your-org-name>"
+            --with olm_org="<your-org-name>" \
+            --with uds_bundle="<path-to-uds-bundle.yaml>"
       - run: |
           uds run publish:zarf-package \
             --with registry_org="<your-org-name>" \
@@ -169,7 +172,7 @@ cut.
 
 ## Customer Deployment (Sandbox Preview)
 
-Passing a `uds-bundle.yaml` to `vouch:package` enables **Customer Deployment** — your application deployed into a UDS Army IL2 sandbox environment for preview and validation. Without it, vouching still succeeds and your package is eligible for publish; you just won't get the sandbox deploy.
+Passing a `uds-bundle.yaml` to `vouch:package` submits material UDS Proving Ground can use for an optional **Customer Deployment** in its IL2 sandbox. Submitting the bundle does not itself create a sandbox deployment or complete validation. Without it, vouching still succeeds and your package is eligible for publish.
 
 ### What goes where
 
@@ -180,7 +183,7 @@ Passing a `uds-bundle.yaml` to `vouch:package` enables **Customer Deployment** �
 
 Think of the Zarf package as your app and the bundle as the environment it runs in. Your application code should read backing-service connection details from environment variables — not bundle the services themselves into the package. This keeps your app portable across environments (local, staging, IL2).
 
-The platform automatically detects and strips testing infrastructure dependencies from your bundle before deploying to the sandbox, so you can submit the same `uds-bundle.yaml` you use for local development. You do not need to provide a [`uds-config.yaml`](https://docs.defenseunicorns.com/cli/how-to-guides/use-bundle-overrides/) — the platform supplies environment-specific configuration at deploy time.
+You can submit the same `uds-bundle.yaml` you use for local development; UDS Proving Ground may apply supported sandbox transformations to infrastructure dependencies. You do not need to provide a [`uds-config.yaml`](https://docs.defenseunicorns.com/cli/how-to-guides/use-bundle-overrides/) — the platform supplies environment-specific configuration at deploy time.
 
 ### Passing your bundle to vouch
 
@@ -362,7 +365,8 @@ publish:
         --with olm_org="<your-org>" \
         --with olm_identity_token="$OLM_ID_TOKEN" \
         --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
-        --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json"
+        --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
+        --with uds_bundle="<path-to-uds-bundle.yaml>"
 ```
 
 See [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) for a complete annotated pipeline.
