@@ -6,7 +6,7 @@ Agents must preserve existing user changes, keep secrets out of files and output
 
 ## What This Repo Is
 
-Shared task library for ISV's onboarding into the UDS Army platform. Provides reusable Maru/UDS task namespaces that teams include in their own `tasks.yaml` to get a complete supply-chain-security pipeline: lint → scan → build → vouch → publish.
+Shared task library for ISV onboarding into UDS Proving Ground. Provides reusable Maru/UDS task namespaces that teams include in their own `tasks.yaml` to get a complete supply-chain-security pipeline: lint → scan → build → vouch → publish.
 
 All automation uses **UDS CLI** (task runner). No npm, go, or traditional build systems.
 
@@ -76,6 +76,8 @@ includes:
 ```
 
 Consumers **must** define a `lint` task — `attest:lint` calls it internally.
+
+For CAT integration, use the exact lowercase Organization slug provisioned for the consumer as `olm_org`. CAT and Chainloop Organization names must match exactly; `registry_org` is a separate registry identifier but should use the same canonical name by convention.
 
 ### Key Design Patterns
 
