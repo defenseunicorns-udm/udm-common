@@ -76,8 +76,11 @@
       "minimumReleaseAge": "0 days"
     },
     {
-      "matchDepNames": ["defenseunicorns-udm/olm"],
-      "minimumReleaseAge": "0 days"
+      "matchDepNames": ["defenseunicorns-udm/cat"],
+      "matchDatasources": ["github-releases"],
+      "matchFileNames": ["tasks/olm.yaml", ".github/actions/olm-cli-setup/action.yaml"],
+      "minimumReleaseAge": "0 days",
+      "ignoreUnstable": false
     }
   ]
 }

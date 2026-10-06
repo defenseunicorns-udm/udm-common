@@ -58,6 +58,16 @@ See [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) for a complete GitLab i
 
 > **Keep versions current:** use [Renovate](https://docs.renovatebot.com/) to auto-update both the UDS CLI version pin above and your `udm-common` task include URLs. The inline `# renovate:` comments in the snippets above and in `examples/` are already wired for Renovate's GitHub Releases datasource.
 
+### OLM CLI
+
+OLM is managed in the [CAT repository](https://github.com/defenseunicorns-udm/cat).
+The setup task and bundled GitHub action pin a complete CAT upstream release tag;
+Renovate keeps both pins current. `olm:setup` installs to `./olm`, reuses an exact
+version match, and replaces older, newer, or unrecognized binaries. Override the
+pin with `uds run olm:setup --with version=<CAT-upstream-release-tag>` (or the
+action's `version` input), including when downgrading. Published installers support
+Linux amd64/arm64 and macOS arm64.
+
 ### Lint task
 
 **You must define a `lint` task** in your repo's `tasks.yaml` before using `attest:lint` — `attest:lint`
