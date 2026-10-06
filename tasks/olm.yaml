@@ -4,9 +4,9 @@ tasks:
     description: Authenticate with GHCR and install the OLM CLI
     inputs:
       version:
-        description: Version of OLM CLI to install
-        # renovate: datasource=github-releases depName=defenseunicorns-udm/olm extractVersion=^olm-(?<version>.+)$
-        default: 0.1.24
+        description: Complete CAT upstream release tag of the OLM CLI to install
+        # renovate: datasource=github-releases depName=defenseunicorns-udm/cat extractVersion=^(?<version>[0-9]+\.[0-9]+\.[0-9]+-uds\.[0-9]+-upstream)$ versioning=semver
+        default: 0.14.3-uds.0-upstream
       github_token:
         description: GitHub token for GHCR authentication. Pass secrets.GITHUB_TOKEN in CI. Leave empty locally — the package is publicly accessible.
         default: ""
@@ -19,19 +19,35 @@ tasks:
           set -euo pipefail
           export PATH="$HOME/.local/bin:$PATH"
 
+          VERSION="${{ .inputs.version }}"
+          VERSION_PATTERN='^olm v([^[:space:]]+) \(commit: [^,]+, built: [^)]+\)$'
+          installed_version() {
+            local output
+            output="$(./olm version 2>/dev/null)" || return 1
+            [[ "$output" =~ $VERSION_PATTERN ]] || return 1
+            printf '%s\n' "${BASH_REMATCH[1]}"
+          }
+
           if [ -f ./olm ]; then
             chmod +x ./olm
-            echo "OLM CLI already exists at ./olm; skipping download."
-            ./olm version || true
-            exit 0
+            if CURRENT_VERSION="$(installed_version)" && [ "$CURRENT_VERSION" = "$VERSION" ]; then
+              echo "OLM CLI $VERSION already exists at ./olm; skipping download."
+              exit 0
+            fi
+            echo "Replacing OLM CLI at ./olm with version $VERSION."
           fi
 
-          # Detect OS
+          # Select a published installer for the host OS and architecture.
           OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
-          case "$OS" in
-            linux)  OCI_OS="linux" ;;
-            darwin) OCI_OS="darwin" ;;
-            *) echo "Unsupported OS: $OS" && exit 1 ;;
+          HOST_ARCH="$(uname -m)"
+          case "$OS/$HOST_ARCH" in
+            linux/x86_64|linux/amd64) OCI_OS="linux"; OCI_ARCH="amd64" ;;
+            linux/aarch64|linux/arm64) OCI_OS="linux"; OCI_ARCH="arm64" ;;
+            darwin/arm64) OCI_OS="darwin"; OCI_ARCH="arm64" ;;
+            *)
+              echo "Unsupported OLM installer host: $OS/$HOST_ARCH. Use Linux amd64/arm64 or macOS arm64."
+              exit 1
+              ;;
           esac
 
           GITHUB_TOKEN_VAL=${{ .inputs.github_token }}
@@ -40,9 +56,15 @@ tasks:
           fi
 
           uds zarf package deploy \
-            "oci://ghcr.io/defenseunicorns-udm/olm-installer:${{ .inputs.version }}-${OCI_OS}" --confirm
+            "oci://ghcr.io/defenseunicorns-udm/olm-installer:${VERSION}-${OCI_OS}" \
+            --architecture "$OCI_ARCH" --confirm
 
           chmod +x olm
+          if ! CURRENT_VERSION="$(installed_version)" || [ "$CURRENT_VERSION" != "$VERSION" ]; then
+            echo "ERROR: Installed OLM CLI does not report requested version $VERSION."
+            exit 1
+          fi
+          echo "Installed OLM CLI $VERSION at ./olm."
 
   - name: generate-fulcio-token
     description: Generate a Fulcio signing token via CAT and write it to .fulcio-token
