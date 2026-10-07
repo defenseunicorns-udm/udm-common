@@ -8,26 +8,26 @@ the UDS Proving Ground registry.
 
 | Namespace | Tasks | Description |
 |-----------|-------|-------------|
-| `setup` | `uds-cli`, `cosign`, `witness` | Installs pipeline tooling |
-| `attest` | `lint` | Wraps your `lint` task with Witness attestation |
-| `scan` | `security`, `gitleaks`, `opengrep` | Runs Gitleaks secrets scanning and OpenGrep SAST |
-| `build` | `zarf-package` | Builds a Zarf package under Witness attestation |
-| `vouch` | `package` | Vouches for a signed Zarf package via OLM, pushing attestations to CAT |
-| `publish` | `zarf-package` | Publishes a vouched Zarf package to the UDS registry |
-| `olm` | `setup` | OLM CLI setup |
+| `udm-setup` | `uds-cli`, `cosign`, `witness` | Installs pipeline tooling |
+| `udm-attest` | `lint` | Wraps your `lint` task with Witness attestation |
+| `udm-scan` | `security`, `gitleaks`, `opengrep` | Runs Gitleaks secrets scanning and OpenGrep SAST |
+| `udm-build` | `zarf-package` | Builds a Zarf package under Witness attestation |
+| `udm-vouch` | `package` | Vouches for a signed Zarf package via OLM, pushing attestations to CAT |
+| `udm-publish` | `zarf-package` | Publishes a vouched Zarf package to the UDS registry |
+| `udm-olm` | `setup` | OLM CLI setup |
 
 ## Pipeline Overview
 
 Every package goes through these stages in order:
 
-1. **Lint** — `attest:lint` runs your repo's `lint` task and signs the result
-2. **Scan** — `scan:security` runs Gitleaks (secrets) and OpenGrep (SAST) and signs each result
-3. **Build + Vouch** — `build:zarf-package` builds the Zarf package; `vouch:package` submits signed attestations to OLM/CAT
-4. **Publish** — `publish:zarf-package` pushes the package to the UDS Proving Ground registry
+1. **Lint** — `udm-attest:lint` runs your repo's `lint` task and signs the result
+2. **Scan** — `udm-scan:security` runs Gitleaks (secrets) and OpenGrep (SAST) and signs each result
+3. **Build + Vouch** — `udm-build:zarf-package` builds the Zarf package; `udm-vouch:package` submits signed attestations to OLM/CAT
+4. **Publish** — `udm-publish:zarf-package` pushes the package to the UDS Proving Ground registry
 
 > **Tooling glossary**
 > - **Witness** — signs each pipeline step, producing `.json` attestation files as evidence
-> - **CAT / Fulcio** — CAT-brokered keyless signing; `olm:generate-fulcio-token` mints a short-lived token from `fulcio.uds-mil.us` before any Witness-attested step. No stored key needed in CI.
+> - **CAT / Fulcio** — CAT-brokered keyless signing; `udm-olm:generate-fulcio-token` mints a short-lived token from `fulcio.uds-mil.us` before any Witness-attested step. No stored key needed in CI.
 > - **OLM / CAT** — UDS Proving Ground compliance tracking; receives signed attestations during `vouch`
 
 ## Prerequisites
@@ -39,7 +39,7 @@ All tasks require the [UDS CLI](https://docs.defenseunicorns.com/cli/getting-sta
 **GitHub Actions** — use the bundled setup action (already included in [`examples/ci-example.yaml`](examples/ci-example.yaml)):
 
 ```yaml
-- uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@9238b820485411b19d3511a749cd1482afba4302 # v0.13.4
+- uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@v0.15.0
 ```
 
 **Other CI / local** — download the binary directly:
@@ -60,23 +60,33 @@ See [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) for a complete GitLab i
 
 ### Lint task
 
-**You must define a `lint` task** in your repo's `tasks.yaml` before using `attest:lint` — `attest:lint`
+**You must define a `lint` task** in your repo's `tasks.yaml` before using `udm-attest:lint` — `udm-attest:lint`
 calls it. See [`examples/tasks.yaml`](examples/tasks.yaml) for patterns covering Python, Go, TypeScript,
 and monorepos. For an overview of the UDS task runner format, see [Use UDS Runner](https://docs.defenseunicorns.com/cli/how-to-guides/use-uds-runner/).
 
 ## Quickstart
 
+All reusable task namespaces use the `udm-` prefix so they can coexist with
+`uds-common` includes such as `setup` and `publish`. Keep the include aliases
+shown below: internal task calls depend on `udm-setup` and `udm-olm`. Task filenames
+and task names within each namespace are unchanged. The consumer still defines
+its own root `lint` task, which `udm-attest:lint` invokes.
+
+The examples below target release `v0.15.0`, which introduces the prefixed
+namespaces. To try this checkout locally, use paths such as `./tasks/setup.yaml`
+with the `udm-setup` alias instead of remote URLs.
+
 Include task namespaces from this repo in your `tasks.yaml`:
 
 ```yaml
 includes:
-  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/attest.yaml
-  - build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/build.yaml
-  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/olm.yaml
-  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/publish.yaml
-  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/scan.yaml
-  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/setup.yaml
-  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/vouch.yaml
+  - udm-attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/attest.yaml
+  - udm-build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/build.yaml
+  - udm-olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/olm.yaml
+  - udm-publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/publish.yaml
+  - udm-scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/scan.yaml
+  - udm-setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/setup.yaml
+  - udm-vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/vouch.yaml
 
 ```
 
@@ -84,7 +94,7 @@ See [`examples/tasks.yaml`](examples/tasks.yaml) for a full starting point.
 
 ### Minimal CI workflow (GitHub Actions)
 
-> **Note:** `build:zarf-package` and `vouch:package` are separate steps. Run build first, then vouch.
+> **Note:** `udm-build:zarf-package` and `udm-vouch:package` are separate steps. Run build first, then vouch.
 
 ```yaml
 jobs:
@@ -96,20 +106,20 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@9238b820485411b19d3511a749cd1482afba4302 # v0.13.4
+      - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@v0.15.0
       - run: |
-          uds run olm:generate-fulcio-token \
+          uds run udm-olm:generate-fulcio-token \
             --with olm_cat="cat-api.uds-mil.us" \
             --with olm_org="<your-org-name>" \
             --with github_token="${{ secrets.GITHUB_TOKEN }}"
-      - run: uds run attest:lint
+      - run: uds run udm-attest:lint
       - run: |
-          uds run scan:security \
+          uds run udm-scan:security \
             --with gitleaks_scan_path="." \
             --with opengrep_scan_path="."
-      - run: uds run build:zarf-package
+      - run: uds run udm-build:zarf-package
       - run: |
-          uds run vouch:package \
+          uds run udm-vouch:package \
             --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
             --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
             --with olm_cat="cat-api.uds-mil.us" \
@@ -117,7 +127,7 @@ jobs:
             --with uds_bundle="<path-to-uds-bundle.yaml>"
 
       - run: |
-          uds run publish:zarf-package \
+          uds run udm-publish:zarf-package \
             --with registry_org="<your-org-name>" \
             --with registry_user_id="${{ secrets.REGISTRY_USER_ID }}" \
             --with registry_password="${{ secrets.REGISTRY_PASSWORD }}"
@@ -137,21 +147,21 @@ jobs:
         service: [api, worker, frontend]
     steps:
       - run: |
-          uds run scan:security \
+          uds run udm-scan:security \
             --with gitleaks_scan_path="services/${{ matrix.service }}" \
             --with opengrep_scan_path="services/${{ matrix.service }}"
       - run: |
-          uds run build:zarf-package \
+          uds run udm-build:zarf-package \
             --with zarf_path="services/${{ matrix.service }}"
       - run: |
-          uds run vouch:package \
+          uds run udm-vouch:package \
             --with attestations="gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
             --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
             --with olm_cat="cat-api.uds-mil.us" \
             --with olm_org="<your-org-name>" \
             --with uds_bundle="<path-to-uds-bundle.yaml>"
       - run: |
-          uds run publish:zarf-package \
+          uds run udm-publish:zarf-package \
             --with registry_org="<your-org-name>" \
             --with registry_user_id="${{ secrets.REGISTRY_USER_ID }}" \
             --with registry_password="${{ secrets.REGISTRY_PASSWORD }}"
@@ -159,7 +169,7 @@ jobs:
 
 ### Security Scan Scope
 
-`scan:gitleaks` scans tracked Git commits in the current package iteration, not
+`udm-scan:gitleaks` scans tracked Git commits in the current package iteration, not
 the live working directory. It compares `HEAD` to the local `origin/main` or
 `origin/master` default branch ref and scopes the scan to `gitleaks_scan_path`.
 This keeps local-only files such as `.env` files, generated SARIF reports, and
@@ -172,7 +182,7 @@ cut.
 
 ## Customer Deployment (Sandbox Preview)
 
-Passing a `uds-bundle.yaml` to `vouch:package` submits material UDS Proving Ground can use for an optional **Customer Deployment** in its IL2 sandbox. Submitting the bundle does not itself create a sandbox deployment or complete validation. Without it, vouching still succeeds and your package is eligible for publish.
+Passing a `uds-bundle.yaml` to `udm-vouch:package` submits material UDS Proving Ground can use for an optional **Customer Deployment** in its IL2 sandbox. Submitting the bundle does not itself create a sandbox deployment or complete validation. Without it, vouching still succeeds and your package is eligible for publish.
 
 ### What goes where
 
@@ -187,12 +197,12 @@ You can submit the same `uds-bundle.yaml` you use for local development; UDS Pro
 
 ### Passing your bundle to vouch
 
-Add `--with uds_bundle="uds-bundle.yaml"` to your existing `vouch:package` call. The path should point to the `uds-bundle.yaml` in your repo.
+Add `--with uds_bundle="uds-bundle.yaml"` to your existing `udm-vouch:package` call. The path should point to the `uds-bundle.yaml` in your repo.
 
 **GitHub Actions:**
 
 ```shell
-uds run vouch:package \
+uds run udm-vouch:package \
   --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
   --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
   --with olm_cat="cat-api.uds-mil.us" \
@@ -203,7 +213,7 @@ uds run vouch:package \
 **GitLab CI** — also pass `olm_identity_token`:
 
 ```shell
-uds run vouch:package \
+uds run udm-vouch:package \
   --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
   --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
   --with olm_cat="cat-api.uds-mil.us" \
@@ -234,35 +244,35 @@ packages:
 
 ## Custom Build Commands
 
-By default `build:zarf-package` runs `uds zarf package create .`.
+By default `udm-build:zarf-package` runs `uds zarf package create .`.
 If your build requires a custom script (pre-processing, non-standard flags, multi-step build), pass `build_command`:
 
 ```shell
-uds run build:zarf-package \
+uds run udm-build:zarf-package \
     --with build_command="scripts/build.sh"
 ```
 ## Required Secrets
 
 | Secret | Used By | Description |
 |--------|---------|-------------|
-| `REGISTRY_USER_ID` | `publish:zarf-package` | Username for publishing to `registry.uds-mil.us` |
-| `REGISTRY_PASSWORD` | `publish:zarf-package` | Password for publishing to `registry.uds-mil.us` |
+| `REGISTRY_USER_ID` | `udm-publish:zarf-package` | Username for publishing to `registry.uds-mil.us` |
+| `REGISTRY_PASSWORD` | `udm-publish:zarf-package` | Password for publishing to `registry.uds-mil.us` |
 
 ## Run Locally
 
 | Lint with Witness attestation | Run SAST scans with Witness attestation | Build Zarf package with Witness attestation | Vouch for package and push attestations to CAT | Publish package to registry ||
 |---|---|---|---|---|---|
-| `attest-lint` | → `scan:security` | → `build:zarf-package` | → `vouch:package` | → `publish:zarf-package` |  |
+| `udm-attest:lint` | → `udm-scan:security` | → `udm-build:zarf-package` | → `udm-vouch:package` | → `udm-publish:zarf-package` |  |
 |
 
-The full local flow needs a Witness key pair for task attestations. `setup:witness` will download
+The full local flow needs a Witness key pair for task attestations. `udm-setup:witness` will download
 the required CLIs and place them on your `PATH`.
 
 Use the UDS CLI to execute tasks locally before you push or run CI.
-The full local flow needs a Witness key pair for task attestations. `setup:witness` will download the required CLIs and place them on your PATH.
+The full local flow needs a Witness key pair for task attestations. `udm-setup:witness` will download the required CLIs and place them on your PATH.
 
 ```shell
-uds run setup:witness
+uds run udm-setup:witness
 openssl genpkey -algorithm ed25519 -outform PEM -out witness-key.pem
 openssl pkey -in witness-key.pem -pubout > witness-pub.pem
 ```
@@ -270,14 +280,14 @@ openssl pkey -in witness-key.pem -pubout > witness-pub.pem
 **Wrap your repo's `lint` task with Witness:**
 
 ```shell
-uds run attest:lint \
+uds run udm-attest:lint \
   --with witness_key_path="$(pwd)/witness-key.pem"
 ```
 
 **Run Gitleaks and OpenGrep SAST under Witness attestation:**
 
 ```shell
-uds run scan:security \
+uds run udm-scan:security \
   --with witness_key_path="$(pwd)/witness-key.pem" \
   --with gitleaks_scan_path="." \
   --with opengrep_scan_path="."
@@ -286,33 +296,33 @@ uds run scan:security \
 Build the Zarf package with Witness attestation:
 
 ```shell
-uds run build:zarf-package \
+uds run udm-build:zarf-package \
   --with witness_key_path="$(pwd)/witness-key.pem"
 ```
 
 Vouch for the package and push attestations to CAT:
 
 ```shell
-uds run vouch:package \
+uds run udm-vouch:package \
   --with olm_cat="<cat-domain>" \
   --with olm_org="<org>" \
   --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
   --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json"
 ```
 
-When `zarf_package` is unset, `vouch:package` uses the most recent `zarf-package-*.tar.zst` in the current directory. Pass `--with zarf_package=<path>` explicitly for local runs where old artifacts may be present, or when a repo produces multiple packages.
+When `zarf_package` is unset, `udm-vouch:package` uses the most recent `zarf-package-*.tar.zst` in the current directory. Pass `--with zarf_package=<path>` explicitly for local runs where old artifacts may be present, or when a repo produces multiple packages.
 
 Publish the Zarf package to the registry:
 
 ```shell
-uds run publish:zarf-package \
+uds run udm-publish:zarf-package \
   --with registry_org="<org>" \
   --with registry_user_id="<registry-user-id>" \
   --with registry_password="<registry-password>" \
   --with zarf_package="zarf-package-<name>-<architecture>-<version>.tar.zst"
 ```
 
-In CI, `publish:zarf-package` can usually rely on the workspace containing only
+In CI, `udm-publish:zarf-package` can usually rely on the workspace containing only
 the package produced by the current job. When `zarf_package` is unset, the task
 publishes the most recent `zarf-package-*.tar.zst` in the current directory. For
 local runs, pass `zarf_package` explicitly when old package artifacts may still
@@ -320,13 +330,13 @@ be present.
 
 ## CI Provider Configuration
 
-All Witness attestation signing uses `fulcio.uds-mil.us` via a CAT-brokered token. Before any Witness-attested step, call `olm:generate-fulcio-token` to mint a short-lived JWT and write it to `.fulcio-token`. The attestation tasks (`attest:lint`, `scan:security`, `scan:gitleaks`, `scan:opengrep`, `build:zarf-package`) read `.fulcio-token` automatically when it is present.
+All Witness attestation signing uses `fulcio.uds-mil.us` via a CAT-brokered token. Before any Witness-attested step, call `udm-olm:generate-fulcio-token` to mint a short-lived JWT and write it to `.fulcio-token`. The attestation tasks (`udm-attest:lint`, `udm-scan:security`, `udm-scan:gitleaks`, `udm-scan:opengrep`, `udm-build:zarf-package`) read `.fulcio-token` automatically when it is present.
 
 On **GitHub Actions**, OLM auto-detects the GitHub OIDC token — no extra configuration needed beyond `id-token: write` on the job.
 
 ### Configuring Fulcio signing for GitLab CI
 
-GitLab requires OIDC tokens to be explicitly requested via `id_tokens`. Request a token with audience `cat` and pass it to `olm:generate-fulcio-token` as `olm_identity_token`. Each job that runs Witness-attested steps must generate its own token — `.fulcio-token` is gitignored and is not shared between jobs.
+GitLab requires OIDC tokens to be explicitly requested via `id_tokens`. Request a token with audience `cat` and pass it to `udm-olm:generate-fulcio-token` as `olm_identity_token`. Each job that runs Witness-attested steps must generate its own token — `.fulcio-token` is gitignored and is not shared between jobs.
 
 ```yaml
 # .gitlab-ci.yml — CAT token request (add to every job that signs with Witness)
@@ -338,12 +348,12 @@ ci:
   script:
     # Generate Fulcio token before any Witness-attested step
     - |
-      uds run olm:generate-fulcio-token \
+      uds run udm-olm:generate-fulcio-token \
         --with olm_cat="cat-api.uds-mil.us" \
         --with olm_org="<your-org>" \
         --with olm_identity_token="$OLM_ID_TOKEN"
-    - uds run attest:lint
-    - uds run scan:security
+    - uds run udm-attest:lint
+    - uds run udm-scan:security
 ```
 
 ```yaml
@@ -354,13 +364,13 @@ publish:
       aud: cat
   script:
     - |
-      uds run olm:generate-fulcio-token \
+      uds run udm-olm:generate-fulcio-token \
         --with olm_cat="cat-api.uds-mil.us" \
         --with olm_org="<your-org>" \
         --with olm_identity_token="$OLM_ID_TOKEN"
-    - uds run build:zarf-package
+    - uds run udm-build:zarf-package
     - |
-      uds run vouch:package \
+      uds run udm-vouch:package \
         --with olm_cat="cat-api.uds-mil.us" \
         --with olm_org="<your-org>" \
         --with olm_identity_token="$OLM_ID_TOKEN" \
@@ -373,8 +383,8 @@ See [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) for a complete annotate
 
 ## Lint Task
 
-`attest:lint` wraps your repo's `lint` task with Witness attestation. **You
-must define a `lint` task in your repo's `tasks.yaml`** — `attest:lint` calls
+`udm-attest:lint` wraps your repo's `lint` task with Witness attestation. **You
+must define a `lint` task in your repo's `tasks.yaml`** — `udm-attest:lint` calls
 it. See [`examples/tasks.yaml`](examples/tasks.yaml) for patterns covering
 Python, Go, TypeScript, and monorepos.
 
@@ -382,14 +392,36 @@ Include all task namespaces in your repo's `tasks.yaml`:
 
 ```yaml
 includes:
-  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/attest.yaml
-  - build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/build.yaml
-  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/olm.yaml
-  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/publish.yaml
-  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/scan.yaml
-  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/setup.yaml
-  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/vouch.yaml
+  - udm-attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/attest.yaml
+  - udm-build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/build.yaml
+  - udm-olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/olm.yaml
+  - udm-publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/publish.yaml
+  - udm-scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/scan.yaml
+  - udm-setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/setup.yaml
+  - udm-vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/vouch.yaml
 ```
+
+## Migrating to v0.15.0 (prefixed namespaces)
+
+This is a breaking change. Update all seven include aliases and their calls in
+`tasks.yaml`, CI workflows, and scripts:
+
+| Previous namespace | New namespace |
+|--------------------|---------------|
+| `setup` | `udm-setup` |
+| `attest` | `udm-attest` |
+| `scan` | `udm-scan` |
+| `build` | `udm-build` |
+| `olm` | `udm-olm` |
+| `vouch` | `udm-vouch` |
+| `publish` | `udm-publish` |
+
+For example, `uds run setup:witness` becomes `uds run udm-setup:witness`, and
+`task: build:zarf-package` becomes `task: udm-build:zarf-package`. Update the
+include URL pins to `v0.15.0` at the same time; changing
+only aliases against older releases leaves their internal calls incompatible.
+Do not rename the consumer's root `lint` task or the repository's root
+orchestration tasks (`test`, `scan-and-vouch`, and `pipeline`).
 
 ## Migrating from v0.11.x to v0.12.x
 

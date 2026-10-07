@@ -43,8 +43,8 @@ tasks:
           fi
 
           if [ -z "$REGISTRY_ORG" ]; then
-            echo "registry_org is required for publish:zarf-package."
-            echo "Example: uds run publish:zarf-package --with registry_org=<your-org>"
+            echo "registry_org is required for udm-publish:zarf-package."
+            echo "Example: uds run udm-publish:zarf-package --with registry_org=<your-org>"
             exit 1
           fi
 

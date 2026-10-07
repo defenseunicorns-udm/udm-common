@@ -29,9 +29,9 @@ uds run pipeline
 
 ### Tool setup (first time)
 ```bash
-uds run setup:uds-cli
-uds run setup:witness
-uds run setup:cosign
+uds run udm-setup:uds-cli
+uds run udm-setup:witness
+uds run udm-setup:cosign
 
 # Generate local ED25519 signing key for local runs
 openssl genpkey -algorithm ed25519 -out witness-key.pem
@@ -42,7 +42,7 @@ openssl pkey -in witness-key.pem -pubout -out witness-pub-key.pem
 
 ### Pipeline Flow
 ```
-attest:lint  →  scan:security  →  build:zarf-package  →  vouch:package  →  publish:zarf-package
+udm-attest:lint  →  udm-scan:security  →  udm-build:zarf-package  →  udm-vouch:package  →  udm-publish:zarf-package
      ↓                ↓                   ↓                    ↓
 lint-witness.json  *.sarif.json   zarf-create-witness.json  (submitted to OLM/CAT)
 ```
@@ -55,27 +55,30 @@ Each step produces a signed **in-toto attestation** (`*-witness.json`). In CI, s
 
 | File | Namespace | Purpose |
 |------|-----------|---------|
-| `tasks/setup.yaml` | `setup:` | Install UDS CLI, Cosign, Witness, Gitleaks, OpenGrep, OLM |
-| `tasks/attest.yaml` | `attest:` | Wrap consumer's `lint` task with Witness attestation |
-| `tasks/scan.yaml` | `scan:` | Gitleaks (secrets) + OpenGrep (SAST), produces SARIF |
-| `tasks/build.yaml` | `build:` | Build Zarf package with Witness attestation |
-| `tasks/vouch.yaml` | `vouch:` | Build + attest + submit to OLM/CAT |
-| `tasks/publish.yaml` | `publish:` | OCI registry publish via Zarf |
-| `tasks/olm.yaml` | `olm:` | OLM CLI setup |
+| `tasks/setup.yaml` | `udm-setup:` | Install UDS CLI, Cosign, Witness, Gitleaks, OpenGrep, OLM |
+| `tasks/attest.yaml` | `udm-attest:` | Wrap consumer's `lint` task with Witness attestation |
+| `tasks/scan.yaml` | `udm-scan:` | Gitleaks (secrets) + OpenGrep (SAST), produces SARIF |
+| `tasks/build.yaml` | `udm-build:` | Build Zarf package with Witness attestation |
+| `tasks/vouch.yaml` | `udm-vouch:` | Build + attest + submit to OLM/CAT |
+| `tasks/publish.yaml` | `udm-publish:` | OCI registry publish via Zarf |
+| `tasks/olm.yaml` | `udm-olm:` | OLM CLI setup |
 
 ### How Teams Consume This
 
-Teams add to their own `tasks.yaml`:
+Teams add to their own `tasks.yaml` (replace `<udm-common-release>` with a tag
+containing the prefixed namespaces):
 ```yaml
 includes:
-  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/attest.yaml
-  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/scan.yaml
-  - build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/build.yaml
-  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/vouch.yaml
-  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.3/tasks/publish.yaml
+  - udm-setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/<udm-common-release>/tasks/setup.yaml
+  - udm-olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/<udm-common-release>/tasks/olm.yaml
+  - udm-attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/<udm-common-release>/tasks/attest.yaml
+  - udm-scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/<udm-common-release>/tasks/scan.yaml
+  - udm-build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/<udm-common-release>/tasks/build.yaml
+  - udm-vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/<udm-common-release>/tasks/vouch.yaml
+  - udm-publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/<udm-common-release>/tasks/publish.yaml
 ```
 
-Consumers **must** define a `lint` task — `attest:lint` calls it internally.
+Consumers **must** define a `lint` task — `udm-attest:lint` calls it internally.
 
 For CAT integration, use the exact lowercase Organization slug provisioned for the consumer as `olm_org`. CAT and Chainloop Organization names must match exactly; `registry_org` is a separate registry identifier but should use the same canonical name by convention.
 
