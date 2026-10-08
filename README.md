@@ -58,6 +58,16 @@ See [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) for a complete GitLab i
 
 > **Keep versions current:** use [Renovate](https://docs.renovatebot.com/) to auto-update both the UDS CLI version pin above and your `udm-common` task include URLs. The inline `# renovate:` comments in the snippets above and in `examples/` are already wired for Renovate's GitHub Releases datasource.
 
+### OLM CLI
+
+OLM is managed in the [CAT repository](https://github.com/defenseunicorns-udm/cat).
+The setup task and bundled GitHub action pin a complete CAT upstream release tag;
+Renovate keeps both pins current. `olm:setup` installs to `./olm`, reuses an exact
+version match, and replaces older, newer, or unrecognized binaries. Override the
+pin with `uds run olm:setup --with version=<CAT-upstream-release-tag>` (or the
+action's `version` input), including when downgrading. Published installers support
+Linux amd64/arm64 and macOS arm64.
+
 ### Lint task
 
 **You must define a `lint` task** in your repo's `tasks.yaml` before using `udm-attest:lint` — `udm-attest:lint`
@@ -433,7 +443,7 @@ v0.12 replaces direct Sigstore OIDC signing (`fulcio.sigstore.dev`) with CAT-bro
 
 ```yaml
 includes:
-  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.13.4/tasks/olm.yaml
+  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/olm.yaml
 ```
 
 **2. Remove `fulcio_oidc_issuer` from all task calls.** The parameter no longer exists. Remove any `--with fulcio_oidc_issuer=...` from `attest:lint`, `scan:security`, `scan:gitleaks`, `scan:opengrep`, and `build:zarf-package` calls.

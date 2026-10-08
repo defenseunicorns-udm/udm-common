@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.14.0](https://github.com/defenseunicorns-udm/udm-common/compare/v0.13.4...v0.14.0) (2026-10-06)
+
+
+### Features
+
+* new olm update pattern ([#161](https://github.com/defenseunicorns-udm/udm-common/issues/161)) ([706b99f](https://github.com/defenseunicorns-udm/udm-common/commit/706b99f2970989f06f19a82a63569da98f1a9326))
+
 ## [0.13.4](https://github.com/defenseunicorns-udm/udm-common/compare/v0.13.3...v0.13.4) (2026-07-13)
 
 

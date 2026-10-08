@@ -3,9 +3,9 @@ description: Install OLM CLI
 
 inputs:
   version:
-    description: Version of OLM CLI to install
-    # renovate: datasource=github-releases depName=defenseunicorns/uds-dot-mil extractVersion=^olm-(?<version>.+)$
-    default: 0.1.19
+    description: Complete CAT upstream release tag of the OLM CLI to install
+    # renovate: datasource=github-releases depName=defenseunicorns-udm/cat extractVersion=^(?<version>[0-9]+\.[0-9]+\.[0-9]+-uds\.[0-9]+-upstream)$ versioning=semver
+    default: 0.14.3-uds.0-upstream
   github-token:
     description: The GITHUB_TOKEN secret
     required: true
@@ -22,5 +22,11 @@ runs:
       env:
         VERSION: ${{ inputs.version }}
       run: |
-        uds zarf package deploy oci://ghcr.io/defenseunicorns-udm/olm-installer:${VERSION}-linux -a amd64 --confirm
+        set -euo pipefail
+        uds zarf package deploy "oci://ghcr.io/defenseunicorns-udm/olm-installer:${VERSION}-linux" -a amd64 --confirm
         chmod +x olm
+        VERSION_PATTERN='^olm v([^[:space:]]+) \(commit: [^,]+, built: [^)]+\)$'
+        if ! VERSION_OUTPUT="$(./olm version)" || ! [[ "$VERSION_OUTPUT" =~ $VERSION_PATTERN ]] || [ "${BASH_REMATCH[1]}" != "$VERSION" ]; then
+          echo "ERROR: Installed OLM CLI does not report requested version $VERSION."
+          exit 1
+        fi
