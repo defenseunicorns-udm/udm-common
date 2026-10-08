@@ -1,0 +1,74 @@
+name: Scan, Vouch, and Publish
+
+on:
+  workflow_call:
+    secrets:
+      OLM_ORG:
+        required: true
+      REGISTRY_ORG:
+        required: true
+      REGISTRY_USER_ID:
+        required: true
+      REGISTRY_PASSWORD:
+        required: true
+
+jobs:
+  scan-vouch-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: UDS CLI Setup
+        uses: ./.github/actions/uds-cli-setup
+
+      - name: Generate Fulcio Token
+        run: |
+          uds run olm:generate-fulcio-token --no-progress \
+            --with olm_cat="cat-api.uds-mil.us" \
+            --with olm_org="${{ secrets.OLM_ORG }}" \
+            --with github_token="${{ secrets.GITHUB_TOKEN }}"
+          test -s .fulcio-token
+
+      - name: Witness Run Lint
+        run: uds run attest:lint --no-progress
+
+      - name: Security Scan
+        run: |
+          uds run scan:security --no-progress \
+            --with opengrep_scan_path=src/ \
+            --with gitleaks_scan_path=src/
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Refresh Fulcio Token
+        run: |
+          uds run olm:generate-fulcio-token --no-progress \
+            --with olm_cat="cat-api.uds-mil.us" \
+            --with olm_org="${{ secrets.OLM_ORG }}" \
+            --with github_token="${{ secrets.GITHUB_TOKEN }}"
+          test -s .fulcio-token
+
+      - name: Build Zarf Package
+        run: uds run build:zarf-package --no-progress
+
+      - name: Vouch Zarf Package via OLM
+        run: |
+          uds run vouch:package --no-progress \
+            --with olm_cat="cat-api.uds-mil.us" \
+            --with olm_org="${{ secrets.OLM_ORG }}" \
+            --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
+            --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json"
+
+      - name: Publish Zarf Package to Registry
+        run: |
+          uds run publish:zarf-package --no-progress \
+            --with registry_org="${{ secrets.REGISTRY_ORG }}" \
+            --with registry_user_id="${{ secrets.REGISTRY_USER_ID }}" \
+            --with registry_password="${{ secrets.REGISTRY_PASSWORD }}"
