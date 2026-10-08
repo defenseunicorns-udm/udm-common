@@ -2,6 +2,9 @@ name: CI
 
 on:
   workflow_dispatch:
+  schedule:
+    # Exercise the latest staging CAT regularly without adding it to every push/PR.
+    - cron: 17 9 * * *
   push:
     branches:
       - main
@@ -27,12 +30,31 @@ jobs:
         run: uds run test --no-progress
 
   scan-vouch-publish:
+    name: ci-${{ matrix.environment }}
     runs-on: ubuntu-latest
+    environment: ${{ matrix.environment }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Production runs for every event. Staging runs nightly and on manual dispatch.
+        environment: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '["production", "staging"]' || '["production"]') }}
     permissions:
       contents: read
       packages: write
       id-token: write
+    env:
+      CAT_HOST: ${{ vars.CAT_HOST }}
+      FULCIO_URL: ${{ vars.FULCIO_URL }}
     steps:
+
+      - name: Validate CI variables
+        env:
+          ENVIRONMENT: ${{ matrix.environment }}
+        run: |
+          if [ -z "$CAT_HOST" ] || [ -z "$FULCIO_URL" ]; then
+            echo "::error::Configure CAT_HOST and FULCIO_URL variables in the $ENVIRONMENT GitHub Environment."
+            exit 1
+          fi
 
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -43,18 +65,21 @@ jobs:
       - name: Generate Fulcio Token
         run: |
           uds run olm:generate-fulcio-token --no-progress \
-            --with olm_cat="cat-api.uds-mil.us" \
+            --with olm_cat="$CAT_HOST" \
             --with olm_org="${{ secrets.OLM_ORG }}" \
             --with github_token="${{ secrets.GITHUB_TOKEN }}"
 
       - name: Witness Run Lint
-        run: uds run attest:lint --no-progress
+        run: |
+          uds run attest:lint --no-progress \
+            --with fulcio_url="$FULCIO_URL"
 
       - name: Security Scan
         run: |
           uds run scan:security --no-progress \
             --with opengrep_scan_path=src/ \
-            --with gitleaks_scan_path=src/
+            --with gitleaks_scan_path=src/ \
+            --with fulcio_url="$FULCIO_URL"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
@@ -62,22 +87,25 @@ jobs:
       - name: Refresh Fulcio Token
         run: |
           uds run olm:generate-fulcio-token --no-progress \
-            --with olm_cat="cat-api.uds-mil.us" \
+            --with olm_cat="$CAT_HOST" \
             --with olm_org="${{ secrets.OLM_ORG }}" \
             --with github_token="${{ secrets.GITHUB_TOKEN }}"
 
       - name: Build Zarf Package
-        run: uds run build:zarf-package --no-progress
+        run: |
+          uds run build:zarf-package --no-progress \
+            --with fulcio_url="$FULCIO_URL"
 
       - name: Vouch Zarf Package via OLM
         run: |
           uds run vouch:package --no-progress \
-            --with olm_cat="cat-api.uds-mil.us" \
+            --with olm_cat="$CAT_HOST" \
             --with olm_org="${{ secrets.OLM_ORG }}" \
             --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
             --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json"
 
       - name: Publish Zarf Package to Registry
+        if: matrix.environment == 'production'
         run: |
           uds run publish:zarf-package --no-progress \
             --with registry_org="${{ secrets.REGISTRY_ORG }}" \
