@@ -68,7 +68,6 @@ jobs:
             --with olm_cat="$CAT_HOST" \
             --with olm_org="${{ secrets.OLM_ORG }}" \
             --with github_token="${{ secrets.GITHUB_TOKEN }}"
-            --with olm_project="nginx"
 
       - name: Witness Run Lint
         run: |
