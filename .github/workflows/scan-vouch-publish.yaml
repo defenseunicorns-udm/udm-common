@@ -27,11 +27,20 @@ jobs:
       - name: UDS CLI Setup
         uses: ./.github/actions/uds-cli-setup
 
+      # This CAT deployment validates upstream CI tokens with aud=fulcio.
+      - name: Request GitHub OIDC token for CAT
+        run: |
+          OLM_IDENTITY_TOKEN="$(curl -fsS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=fulcio" | jq -er '.value')"
+          echo "::add-mask::$OLM_IDENTITY_TOKEN"
+          echo "OLM_IDENTITY_TOKEN=$OLM_IDENTITY_TOKEN" >> "$GITHUB_ENV"
+
       - name: Generate Fulcio Token
         run: |
           uds run olm:generate-fulcio-token --no-progress \
             --with olm_cat="cat-api.uds-mil.us" \
             --with olm_org="${{ secrets.OLM_ORG }}" \
+            --with olm_identity_token="$OLM_IDENTITY_TOKEN" \
+            --with olm_project=nginx \
             --with github_token="${{ secrets.GITHUB_TOKEN }}"
           test -s .fulcio-token
 
@@ -47,22 +56,37 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
+      - name: Refresh GitHub OIDC token for CAT
+        run: |
+          OLM_IDENTITY_TOKEN="$(curl -fsS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=fulcio" | jq -er '.value')"
+          echo "::add-mask::$OLM_IDENTITY_TOKEN"
+          echo "OLM_IDENTITY_TOKEN=$OLM_IDENTITY_TOKEN" >> "$GITHUB_ENV"
+
       - name: Refresh Fulcio Token
         run: |
           uds run olm:generate-fulcio-token --no-progress \
             --with olm_cat="cat-api.uds-mil.us" \
             --with olm_org="${{ secrets.OLM_ORG }}" \
+            --with olm_identity_token="$OLM_IDENTITY_TOKEN" \
+            --with olm_project=nginx \
             --with github_token="${{ secrets.GITHUB_TOKEN }}"
           test -s .fulcio-token
 
       - name: Build Zarf Package
         run: uds run build:zarf-package --no-progress
 
+      - name: Refresh GitHub OIDC token for vouch
+        run: |
+          OLM_IDENTITY_TOKEN="$(curl -fsS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=fulcio" | jq -er '.value')"
+          echo "::add-mask::$OLM_IDENTITY_TOKEN"
+          echo "OLM_IDENTITY_TOKEN=$OLM_IDENTITY_TOKEN" >> "$GITHUB_ENV"
+
       - name: Vouch Zarf Package via OLM
         run: |
           uds run vouch:package --no-progress \
             --with olm_cat="cat-api.uds-mil.us" \
             --with olm_org="${{ secrets.OLM_ORG }}" \
+            --with olm_identity_token="$OLM_IDENTITY_TOKEN" \
             --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
             --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json"
 

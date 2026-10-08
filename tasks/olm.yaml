@@ -116,7 +116,8 @@ tasks:
             ARGS+=(--identity-token "$OLM_IDENTITY_TOKEN")
           fi
 
-          TOKEN="$(./olm "${ARGS[@]}" 2>/dev/null)"
+          # OLM prints the token to stdout; preserve stderr for CAT auth errors.
+          TOKEN="$(./olm "${ARGS[@]}")"
           TOKEN="$(echo "$TOKEN" | tr -d '[:space:]')"
           if [ -z "$TOKEN" ]; then
             echo "ERROR: olm generate-fulcio-token returned empty output"
