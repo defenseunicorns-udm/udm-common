@@ -39,7 +39,7 @@ All tasks require the [UDS CLI](https://docs.defenseunicorns.com/cli/getting-sta
 **GitHub Actions** — use the bundled setup action (already included in [`examples/ci-example.yaml`](examples/ci-example.yaml)):
 
 ```yaml
-- uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@v0.15.0
+- uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@v0.14.0
 ```
 
 **Other CI / local** — download the binary directly:
@@ -82,21 +82,21 @@ shown below: internal task calls depend on `udm-setup` and `udm-olm`. Task filen
 and task names within each namespace are unchanged. The consumer still defines
 its own root `lint` task, which `udm-attest:lint` invokes.
 
-The examples below target release `v0.15.0`, which introduces the prefixed
-namespaces. To try this checkout locally, use paths such as `./tasks/setup.yaml`
+The examples below are pinned to `v0.14.0`; Renovate will update the pins
+after the next release is cut. To try this checkout locally, use paths such as `./tasks/setup.yaml`
 with the `udm-setup` alias instead of remote URLs.
 
 Include task namespaces from this repo in your `tasks.yaml`:
 
 ```yaml
 includes:
-  - udm-attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/attest.yaml
-  - udm-build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/build.yaml
-  - udm-olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/olm.yaml
-  - udm-publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/publish.yaml
-  - udm-scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/scan.yaml
-  - udm-setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/setup.yaml
-  - udm-vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/vouch.yaml
+  - udm-attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/attest.yaml
+  - udm-build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/build.yaml
+  - udm-olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/olm.yaml
+  - udm-publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/publish.yaml
+  - udm-scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/scan.yaml
+  - udm-setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/setup.yaml
+  - udm-vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/vouch.yaml
 
 ```
 
@@ -116,7 +116,7 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@v0.15.0
+      - uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@v0.14.0
       - run: |
           uds run udm-olm:generate-fulcio-token \
             --with olm_cat="cat-api.uds-mil.us" \
@@ -402,16 +402,16 @@ Include all task namespaces in your repo's `tasks.yaml`:
 
 ```yaml
 includes:
-  - udm-attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/attest.yaml
-  - udm-build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/build.yaml
-  - udm-olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/olm.yaml
-  - udm-publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/publish.yaml
-  - udm-scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/scan.yaml
-  - udm-setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/setup.yaml
-  - udm-vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/vouch.yaml
+  - udm-attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/attest.yaml
+  - udm-build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/build.yaml
+  - udm-olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/olm.yaml
+  - udm-publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/publish.yaml
+  - udm-scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/scan.yaml
+  - udm-setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/setup.yaml
+  - udm-vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/vouch.yaml
 ```
 
-## Migrating to v0.15.0 (prefixed namespaces)
+## Migrating to the prefixed namespaces
 
 This is a breaking change. Update all seven include aliases and their calls in
 `tasks.yaml`, CI workflows, and scripts:
@@ -428,7 +428,7 @@ This is a breaking change. Update all seven include aliases and their calls in
 
 For example, `uds run setup:witness` becomes `uds run udm-setup:witness`, and
 `task: build:zarf-package` becomes `task: udm-build:zarf-package`. Update the
-include URL pins to `v0.15.0` at the same time; changing
+include URL pins to the release containing this change at the same time; changing
 only aliases against older releases leaves their internal calls incompatible.
 Do not rename the consumer's root `lint` task or the repository's root
 orchestration tasks (`test`, `scan-and-vouch`, and `pipeline`).
