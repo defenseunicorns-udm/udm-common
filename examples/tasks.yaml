@@ -4,20 +4,20 @@
 # GitHub Actions: use defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup
 # Other CI/local: see the Prerequisites section in README.md for install instructions.
 #
-# The CI workflow calls `uds run attest:lint`, which wraps your `lint` task
+# The CI workflow calls `uds run udm-attest:lint`, which wraps your `lint` task
 # with Witness attestation. You MUST define a task named `lint` in your repo's
-# tasks.yaml — attest:lint calls it. The task must exit non-zero on failures.
+# tasks.yaml — udm-attest:lint calls it. The task must exit non-zero on failures.
 #
-# Include attest and setup from udm-common so `uds run attest:lint` is available:
+# Include udm-attest and udm-setup from udm-common so `uds run udm-attest:lint` is available:
 #
 includes:
-  - attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/attest.yaml
-  - build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/build.yaml
-  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/olm.yaml
-  - publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/publish.yaml
-  - scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/scan.yaml
-  - setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/setup.yaml
-  - vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/vouch.yaml
+  - udm-attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/attest.yaml
+  - udm-build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/build.yaml
+  - udm-olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/olm.yaml
+  - udm-publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/publish.yaml
+  - udm-scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/scan.yaml
+  - udm-setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/setup.yaml
+  - udm-vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.14.0/tasks/vouch.yaml
 
 # Copy the relevant section below into your repo's tasks.yaml and adapt as needed.
 
@@ -70,19 +70,19 @@ tasks:
   # - name: build
   #   description: Build Zarf package with a custom build script
   #   actions:
-  #     - task: build:zarf-package
+  #     - task: udm-build:zarf-package
   #       with:
   #         build_command: ./scripts/my-build.sh
   #         # Keyless Witness signing targets prod Fulcio (https://fulcio.uds-mil.us)
-  #         # by default. For a non-prod environment, override it (attest:lint and
-  #         # scan:security accept the same input):
+  #         # by default. For a non-prod environment, override it (udm-attest:lint and
+  #         # udm-scan:security accept the same input):
   #         # fulcio_url: https://fulcio.uds.run
 
   # Equivalent via vouch (builds + vouches in one step):
   # - name: vouch
   #   description: Build and vouch with a custom build script
   #   actions:
-  #     - task: vouch:package
+  #     - task: udm-vouch:package
   #       with:
   #         build_command: ./scripts/my-build.sh
   #         olm_cat: cat-api.uds-mil.us

@@ -55,6 +55,7 @@
       "description": "Update version-tagged raw.githubusercontent.com udm-common task includes",
       "managerFilePatterns": [
         "/^README\\.md$/",
+        "/^CLAUDE\\.md$/",
         "/^examples/.*\\.ya?ml$/"
       ],
       "matchStrings": [

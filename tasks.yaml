@@ -1,13 +1,13 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/defenseunicorns/maru-runner/refs/heads/main/tasks.schema.json
 
 includes:
-  - setup: ./tasks/setup.yaml
-  - scan: ./tasks/scan.yaml
-  - build: ./tasks/build.yaml
-  - olm: ./tasks/olm.yaml
-  - vouch: ./tasks/vouch.yaml
-  - publish: ./tasks/publish.yaml
-  - attest: ./tasks/attest.yaml
+  - udm-setup: ./tasks/setup.yaml
+  - udm-scan: ./tasks/scan.yaml
+  - udm-build: ./tasks/build.yaml
+  - udm-olm: ./tasks/olm.yaml
+  - udm-vouch: ./tasks/vouch.yaml
+  - udm-publish: ./tasks/publish.yaml
+  - udm-attest: ./tasks/attest.yaml
 
 tasks:
 
@@ -138,64 +138,64 @@ tasks:
           set -euo pipefail
           export PATH="$HOME/.local/bin:$PATH"
 
-          echo "==> Testing setup:uds-cli"
-          uds run setup:uds-cli
-          test -x "$HOME/.local/bin/uds" || { echo "FAIL: setup:uds-cli did not install uds to \$HOME/.local/bin"; exit 1; }
-          echo "PASS: setup:uds-cli"
+          echo "==> Testing udm-setup:uds-cli"
+          uds run udm-setup:uds-cli
+          test -x "$HOME/.local/bin/uds" || { echo "FAIL: udm-setup:uds-cli did not install uds to \$HOME/.local/bin"; exit 1; }
+          echo "PASS: udm-setup:uds-cli"
 
-          echo "==> Testing setup:cosign"
-          uds run setup:cosign
-          command -v cosign > /dev/null 2>&1 || { echo "FAIL: setup:cosign did not make cosign available on PATH"; exit 1; }
-          echo "PASS: setup:cosign"
+          echo "==> Testing udm-setup:cosign"
+          uds run udm-setup:cosign
+          command -v cosign > /dev/null 2>&1 || { echo "FAIL: udm-setup:cosign did not make cosign available on PATH"; exit 1; }
+          echo "PASS: udm-setup:cosign"
 
-          echo "==> Testing setup:witness"
-          uds run setup:witness
-          test -x "$HOME/.local/bin/witness" || { echo "FAIL: setup:witness did not install witness to \$HOME/.local/bin"; exit 1; }
-          echo "PASS: setup:witness"
+          echo "==> Testing udm-setup:witness"
+          uds run udm-setup:witness
+          test -x "$HOME/.local/bin/witness" || { echo "FAIL: udm-setup:witness did not install witness to \$HOME/.local/bin"; exit 1; }
+          echo "PASS: udm-setup:witness"
 
-          echo "==> Testing scan:install-gitleaks"
-          uds run scan:install-gitleaks
-          test -x "$HOME/.local/bin/gitleaks" || { echo "FAIL: scan:install-gitleaks did not install gitleaks to \$HOME/.local/bin"; exit 1; }
-          echo "PASS: scan:install-gitleaks"
+          echo "==> Testing udm-scan:install-gitleaks"
+          uds run udm-scan:install-gitleaks
+          test -x "$HOME/.local/bin/gitleaks" || { echo "FAIL: udm-scan:install-gitleaks did not install gitleaks to \$HOME/.local/bin"; exit 1; }
+          echo "PASS: udm-scan:install-gitleaks"
 
-          echo "==> Testing scan:install-opengrep (Linux x86_64 only)"
+          echo "==> Testing udm-scan:install-opengrep (Linux x86_64 only)"
           if [ "$(uname -s)" = "Linux" ] && [ "$(uname -m)" = "x86_64" ]; then
-            uds run scan:install-opengrep
-            test -x "$HOME/.local/bin/opengrep" || { echo "FAIL: scan:install-opengrep did not install opengrep to \$HOME/.local/bin"; exit 1; }
-            echo "PASS: scan:install-opengrep"
+            uds run udm-scan:install-opengrep
+            test -x "$HOME/.local/bin/opengrep" || { echo "FAIL: udm-scan:install-opengrep did not install opengrep to \$HOME/.local/bin"; exit 1; }
+            echo "PASS: udm-scan:install-opengrep"
           else
-            echo "SKIP: scan:install-opengrep (not Linux x86_64)"
+            echo "SKIP: udm-scan:install-opengrep (not Linux x86_64)"
           fi
 
-          echo "==> Testing attest:lint (ephemeral key)"
+          echo "==> Testing udm-attest:lint (ephemeral key)"
           WITNESS_TEST_KEY=$(mktemp /tmp/witness-XXXXXX.pem)
           openssl genpkey -algorithm ED25519 -out "$WITNESS_TEST_KEY" 2>/dev/null
           rm -f lint-witness.json
-          uds run attest:lint \
+          uds run udm-attest:lint \
             --with witness_key_path="$WITNESS_TEST_KEY"
           rm -f "$WITNESS_TEST_KEY"
           test -s lint-witness.json || { echo "FAIL: lint-witness.json not created or empty"; exit 1; }
           rm -f lint-witness.json
-          echo "PASS: attest:lint"
+          echo "PASS: udm-attest:lint"
 
-          echo "==> Testing scan:security (ephemeral key)"
+          echo "==> Testing udm-scan:security (ephemeral key)"
           WITNESS_TEST_KEY=$(mktemp /tmp/witness-XXXXXX.pem)
           openssl genpkey -algorithm ED25519 -out "$WITNESS_TEST_KEY" 2>/dev/null
           rm -f gitleaks.sarif.json gitleaks-witness.json opengrep.sarif.json opengrep-witness.json
-          uds run scan:security \
+          uds run udm-scan:security \
             --with enable_archivista=false \
             --with witness_key_path="$WITNESS_TEST_KEY"
           rm -f "$WITNESS_TEST_KEY"
           test -s gitleaks.sarif.json || { echo "FAIL: gitleaks.sarif.json not created or empty"; exit 1; }
           test -s gitleaks-witness.json || { echo "FAIL: gitleaks-witness.json not created or empty"; exit 1; }
-          echo "PASS: scan:gitleaks produced output files"
+          echo "PASS: udm-scan:gitleaks produced output files"
           if [ "$(uname -s)" = "Linux" ] && [ "$(uname -m)" = "x86_64" ]; then
             test -s opengrep.sarif.json || { echo "FAIL: opengrep.sarif.json not created or empty"; exit 1; }
             test -s opengrep-witness.json || { echo "FAIL: opengrep-witness.json not created or empty"; exit 1; }
-            echo "PASS: scan:opengrep produced output files"
+            echo "PASS: udm-scan:opengrep produced output files"
           fi
           rm -f gitleaks.sarif.json gitleaks-witness.json opengrep.sarif.json opengrep-witness.json
-          echo "PASS: scan:security"
+          echo "PASS: udm-scan:security"
 
           echo "All tests passed."
 
@@ -292,10 +292,10 @@ tasks:
               --with github_token="${{ .inputs.github_token }}"
             )
             [ -n "$OLM_IDENTITY_TOKEN" ] && FULCIO_ARGS+=(--with olm_identity_token="$OLM_IDENTITY_TOKEN")
-            uds run olm:generate-fulcio-token "${FULCIO_ARGS[@]}"
+            uds run udm-olm:generate-fulcio-token "${FULCIO_ARGS[@]}"
           fi
 
-          uds run scan:security \
+          uds run udm-scan:security \
             --with gitleaks_scan_path="${{ .inputs.gitleaks_scan_path }}" \
             --with opengrep_scan_path="${{ .inputs.opengrep_scan_path }}" \
             --with run_opengrep="${{ .inputs.run_opengrep }}" \
@@ -316,7 +316,7 @@ tasks:
           if [ -n "$ZARF_FLAVOR" ]; then
             BUILD_ARGS+=(--with zarf_flavor="$ZARF_FLAVOR")
           fi
-          uds run build:zarf-package "${BUILD_ARGS[@]}"
+          uds run udm-build:zarf-package "${BUILD_ARGS[@]}"
 
           SARIF_FILE_LIST=()
           SCAN_ATTESTATION_LIST=()
@@ -355,7 +355,7 @@ tasks:
             --with attestations="${ALL_EXTRA}"
             --with sarif_files="${SARIF_FILES}"
           )
-          uds run vouch:package "${VOUCH_ARGS[@]}"
+          uds run udm-vouch:package "${VOUCH_ARGS[@]}"
 
   - name: pipeline
     description: Full local pipeline - scan, vouch, and publish
@@ -450,10 +450,10 @@ tasks:
               --with github_token="${{ .inputs.github_token }}"
             )
             [ -n "$OLM_IDENTITY_TOKEN" ] && FULCIO_ARGS+=(--with olm_identity_token="$OLM_IDENTITY_TOKEN")
-            uds run olm:generate-fulcio-token "${FULCIO_ARGS[@]}"
+            uds run udm-olm:generate-fulcio-token "${FULCIO_ARGS[@]}"
           fi
 
-          uds run attest:lint \
+          uds run udm-attest:lint \
             --with witness_key_path="$WITNESS_KEY_PATH" \
             --with witness_workingdir="${{ .inputs.witness_workingdir }}" \
             --with enable_sigstore="${{ .inputs.enable_sigstore }}"
@@ -492,7 +492,7 @@ tasks:
             PUBLISH_DRY_RUN="true"
           fi
 
-          uds run publish:zarf-package \
+          uds run udm-publish:zarf-package \
             --with registry="$REGISTRY" \
             --with registry_org="${{ .inputs.registry_org }}" \
             --with registry_user_id="${{ .inputs.registry_user_id }}" \

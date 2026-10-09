@@ -217,7 +217,7 @@ tasks:
           fi
 
           if [ "$SHOULD_WITNESS" = "true" ]; then
-            uds run setup:witness --no-progress
+            uds run udm-setup:witness --no-progress
             witness run "${WITNESS_ARGS[@]}" -s=gitleaks --outfile="$GITLEAKS_WITNESS" -- "${GITLEAKS_CMD[@]}"
           else
             echo "Sigstore disabled. Running Gitleaks without Witness attestation."
@@ -315,7 +315,7 @@ tasks:
           fi
 
           if [ "$SHOULD_WITNESS" = "true" ]; then
-            uds run setup:witness --no-progress
+            uds run udm-setup:witness --no-progress
             witness run "${WITNESS_ARGS[@]}" -s=opengrep --outfile="$OPENGREP_WITNESS" -- "${OPENGREP_CMD[@]}"
           else
             echo "Sigstore disabled. Running OpenGrep without Witness attestation."

@@ -6,12 +6,12 @@
 # GitLab's default CI config filename is `.gitlab-ci.yml` at repo root.
 #
 # This pipeline produces signed evidence for lint, secret scan, SAST, and
-# package build; submits that evidence to CAT via `vouch:package`; then
+# package build; submits that evidence to CAT via `udm-vouch:package`; then
 # optionally publishes the resulting Zarf package to an OCI registry.
 #
 # Signing uses fulcio.uds-mil.us via a CAT-brokered token (not fulcio.sigstore.dev).
 # Each job that runs Witness-attested steps must generate its own .fulcio-token
-# via olm:generate-fulcio-token before those steps run.
+# via udm-olm:generate-fulcio-token before those steps run.
 #
 # Project-specific values from enxo/oootp are called out inline. Replace them
 # before copying this file into another project.
@@ -71,7 +71,7 @@ ci:
   # the language/runtime your project's lint/build tasks require.
   image: node:24
 
-  # Generic: request a CAT-audience OIDC token for Fulcio signing via olm:generate-fulcio-token.
+  # Generic: request a CAT-audience OIDC token for Fulcio signing via udm-olm:generate-fulcio-token.
   # The token is written to .fulcio-token and read by Witness-attested tasks.
   id_tokens:
     OLM_ID_TOKEN:
@@ -88,23 +88,23 @@ ci:
     # Generic: generate a Fulcio signing token via CAT before any Witness-attested step.
     # Token is written to .fulcio-token and read automatically by attest/scan/build tasks.
     - |
-      uds run olm:generate-fulcio-token \
+      uds run udm-olm:generate-fulcio-token \
         --with olm_cat="$OLM_CAT" \
         --with olm_org="$OLM_ORG" \
         --with olm_identity_token="$OLM_ID_TOKEN"
 
-    # Generic: attest:lint wraps your repo's `lint` task with Witness.
+    # Generic: udm-attest:lint wraps your repo's `lint` task with Witness.
     # Define that task in tasks.yaml; see examples/tasks.yaml.
-    - uds run attest:lint
+    - uds run udm-attest:lint
 
     # Project-specific: enxo/oootp scans apps/. Replace with your source path.
     - |
-      uds run scan:security \
+      uds run udm-scan:security \
         --with opengrep_scan_path=apps/ \
         --with gitleaks_scan_path=apps/
 
   # Generic: pass witness attestations and SARIF reports to the publish job so
-  # vouch:package can submit the full evidence set to CAT.
+  # udm-vouch:package can submit the full evidence set to CAT.
   artifacts:
     paths:
       - lint-witness.json
@@ -144,9 +144,9 @@ publish:
   script:
 
     # Generic: refresh the Fulcio token before the build step.
-    # build:zarf-package can exceed 30 minutes; token is minted fresh here.
+    # udm-build:zarf-package can exceed 30 minutes; token is minted fresh here.
     - |
-      uds run olm:generate-fulcio-token \
+      uds run udm-olm:generate-fulcio-token \
         --with olm_cat="$OLM_CAT" \
         --with olm_org="$OLM_ORG" \
         --with olm_identity_token="$OLM_ID_TOKEN"
@@ -155,11 +155,11 @@ publish:
     # Replace build_command with your package build command, or omit it to use
     # the default `uds zarf package create` behavior.
     - |
-      uds run build:zarf-package \
+      uds run udm-build:zarf-package \
         --with build_command="uds run build-images"
 
     - |
-      uds run vouch:package \
+      uds run udm-vouch:package \
         --with olm_cat="$OLM_CAT" \
         --with olm_org="$OLM_ORG" \
         --with olm_identity_token="$OLM_ID_TOKEN" \
@@ -170,7 +170,7 @@ publish:
     # Configure REGISTRY_USER_ID and REGISTRY_PASSWORD as masked GitLab CI/CD
     # variables, or set dry_run=true when no registry is available.
     - |
-      uds run publish:zarf-package \
+      uds run udm-publish:zarf-package \
         --with registry="registry.uds-mil.us" \
         --with registry_org="$OLM_ORG" \
         --with registry_user_id="$REGISTRY_USER_ID" \
