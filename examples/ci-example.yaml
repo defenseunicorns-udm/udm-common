@@ -25,32 +25,32 @@ jobs:
         uses: defenseunicorns-udm/udm-common/.github/actions/uds-cli-setup@82ecae34ae1478f8c7da938665f15851be61a6ab # v0.14.0
 
       # Must run before any Witness-attested step. Mints a short-lived token at .fulcio-token
-      # used by attest:lint, scan:security, and build:zarf-package for keyless signing.
+      # used by udm-attest:lint, udm-scan:security, and udm-build:zarf-package for keyless signing.
       - name: Generate Fulcio Token
         run: |
-          uds run olm:generate-fulcio-token \
+          uds run udm-olm:generate-fulcio-token \
             --with olm_cat="cat-api.uds-mil.us" \
             --with olm_org="<your-org-name>" \
             --with github_token="${{ secrets.GITHUB_TOKEN }}"
 
-      # attest:lint wraps your repo's 'lint' task with Witness attestation.
+      # udm-attest:lint wraps your repo's 'lint' task with Witness attestation.
       # You MUST define a 'lint' task in your tasks.yaml — see examples/tasks.yaml.
       - name: Lint
-        run: uds run attest:lint
+        run: uds run udm-attest:lint
 
       - name: Security Scan
         run: |
-          uds run scan:security \
+          uds run udm-scan:security \
             --with opengrep_scan_path=/path/to/source_code # Adjust this as needed for your project
 
       # --with build_command is optional. Use it if your build process is more complex than
       # 'zarf package create' and requires additional setup steps.
       - name: Build
-        run: uds run build:zarf-package
+        run: uds run udm-build:zarf-package
 
       - name: Vouch
         run: |
-          uds run vouch:package \
+          uds run udm-vouch:package \
             --with github_token="${{ secrets.GITHUB_TOKEN }}" \
             --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
             --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json" \
@@ -61,7 +61,7 @@ jobs:
 
       - name: Publish
         run: |
-          uds run publish:zarf-package \
+          uds run udm-publish:zarf-package \
             --with registry_org="<your-org-name>" \
             --with registry_user_id="${{ secrets.REGISTRY_USER_ID }}" \
             --with registry_password="${{ secrets.REGISTRY_PASSWORD }}"
