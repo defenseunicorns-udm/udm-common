@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.15.0](https://github.com/defenseunicorns-udm/udm-common/compare/v0.14.0...v0.15.0) (2026-10-21)
+
+
+### Features
+
+* Prefix udm-common tasks to prevent namespace collision ([#165](https://github.com/defenseunicorns-udm/udm-common/issues/165)) ([1203681](https://github.com/defenseunicorns-udm/udm-common/commit/12036818d9bd7df9e594c36f323de8125d62aac0))
+
 ## [0.14.0](https://github.com/defenseunicorns-udm/udm-common/compare/v0.13.4...v0.14.0) (2026-10-06)
 
 
