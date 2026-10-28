@@ -69,7 +69,7 @@ ci:
 
   # Project-specific: enxo/oootp is a Node/Turbo repo. Use an image that has
   # the language/runtime your project's lint/build tasks require.
-  image: node:24
+  image: node:26
 
   # Generic: request a CAT-audience OIDC token for Fulcio signing via udm-olm:generate-fulcio-token.
   # The token is written to .fulcio-token and read by Witness-attested tasks.
@@ -120,7 +120,7 @@ publish:
   <<: *uds-cache
 
   # Project-specific: enxo/oootp uses Node for its build command.
-  image: node:24
+  image: node:26
 
   # Generic: OLM_ID_TOKEN authenticates to CAT to mint a Fulcio signing token
   # and to authorize the vouch submission. Each job generates its own token —
