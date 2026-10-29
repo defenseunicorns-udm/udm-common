@@ -77,10 +77,13 @@
       "minimumReleaseAge": "0 days"
     },
     {
-      "matchDepNames": ["defenseunicorns-udm/cat"],
-      "matchDatasources": ["github-releases"],
-      "matchFileNames": ["tasks/olm.yaml", ".github/actions/olm-cli-setup/action.yaml"],
+      "description": "Update the OLM installer without the security hold",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": [
+        "ghcr.io/defenseunicorns-udm/olm-installer"
+      ],
       "minimumReleaseAge": "0 days",
+      "internalChecksFilter": "none",
       "ignoreUnstable": false
     }
   ]
