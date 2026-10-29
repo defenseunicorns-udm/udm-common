@@ -90,13 +90,13 @@ Include task namespaces from this repo in your `tasks.yaml`:
 
 ```yaml
 includes:
-  - udm-attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/attest.yaml
-  - udm-build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/build.yaml
-  - udm-olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/olm.yaml
-  - udm-publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/publish.yaml
-  - udm-scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/scan.yaml
-  - udm-setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/setup.yaml
-  - udm-vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/vouch.yaml
+  - udm-attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.1/tasks/attest.yaml
+  - udm-build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.1/tasks/build.yaml
+  - udm-olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.1/tasks/olm.yaml
+  - udm-publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.1/tasks/publish.yaml
+  - udm-scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.1/tasks/scan.yaml
+  - udm-setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.1/tasks/setup.yaml
+  - udm-vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.1/tasks/vouch.yaml
 
 ```
 
@@ -402,13 +402,13 @@ Include all task namespaces in your repo's `tasks.yaml`:
 
 ```yaml
 includes:
-  - udm-attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/attest.yaml
-  - udm-build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/build.yaml
-  - udm-olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/olm.yaml
-  - udm-publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/publish.yaml
-  - udm-scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/scan.yaml
-  - udm-setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/setup.yaml
-  - udm-vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/vouch.yaml
+  - udm-attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.1/tasks/attest.yaml
+  - udm-build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.1/tasks/build.yaml
+  - udm-olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.1/tasks/olm.yaml
+  - udm-publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.1/tasks/publish.yaml
+  - udm-scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.1/tasks/scan.yaml
+  - udm-setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.1/tasks/setup.yaml
+  - udm-vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.1/tasks/vouch.yaml
 ```
 
 ## Migrating to the prefixed namespaces
@@ -443,7 +443,7 @@ v0.12 replaces direct Sigstore OIDC signing (`fulcio.sigstore.dev`) with CAT-bro
 
 ```yaml
 includes:
-  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.0/tasks/olm.yaml
+  - olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.1/tasks/olm.yaml
 ```
 
 **2. Remove `fulcio_oidc_issuer` from all task calls.** The parameter no longer exists. Remove any `--with fulcio_oidc_issuer=...` from `attest:lint`, `scan:security`, `scan:gitleaks`, `scan:opengrep`, and `build:zarf-package` calls.
