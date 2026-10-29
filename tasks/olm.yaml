@@ -6,7 +6,7 @@ tasks:
       version:
         description: Complete CAT upstream release tag of the OLM CLI to install
         # renovate: datasource=docker depName=ghcr.io/defenseunicorns-udm/olm-installer extractVersion=^(?<version>[0-9]+\.[0-9]+\.[0-9]+-uds\.[0-9]+-upstream)-linux$ versioning=semver
-        default: 0.16.3-uds.0-upstream
+        default: 0.16.4-uds.0-upstream
       github_token:
         description: GitHub token for GHCR authentication. Pass secrets.GITHUB_TOKEN in CI. Leave empty locally — the package is publicly accessible.
         default: ""
