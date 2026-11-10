@@ -77,11 +77,13 @@
       "minimumReleaseAge": "0 days"
     },
     {
-      "description": "Update the OLM installer without the security hold",
+      "description": "Update the OLM installer without the security hold and trigger a patch release",
       "matchDatasources": ["docker"],
       "matchPackageNames": [
         "ghcr.io/defenseunicorns-udm/olm-installer"
       ],
+      "semanticCommits": "enabled",
+      "semanticCommitType": "fix",
       "minimumReleaseAge": "0 days",
       "internalChecksFilter": "none",
       "ignoreUnstable": false
