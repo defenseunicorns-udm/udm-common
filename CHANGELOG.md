@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.15.2](https://github.com/defenseunicorns-udm/udm-common/compare/v0.15.1...v0.15.2) (2026-11-11)
+
+
+### Bug Fixes
+
+* **deps:** update ghcr.io/defenseunicorns-udm/olm-installer docker tag to v0.18.0-uds.1-upstream ([#189](https://github.com/defenseunicorns-udm/udm-common/issues/189)) ([e746e0e](https://github.com/defenseunicorns-udm/udm-common/commit/e746e0e4cab06b22278538b2f2ba84fb41702039))
+
 ## [0.15.1](https://github.com/defenseunicorns-udm/udm-common/compare/v0.15.0...v0.15.1) (2026-10-29)
 
 
