@@ -68,13 +68,13 @@ Each step produces a signed **in-toto attestation** (`*-witness.json`). In CI, s
 Teams add to their own `tasks.yaml`:
 ```yaml
 includes:
-  - udm-setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.1/tasks/setup.yaml
-  - udm-olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.1/tasks/olm.yaml
-  - udm-attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.1/tasks/attest.yaml
-  - udm-scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.1/tasks/scan.yaml
-  - udm-build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.1/tasks/build.yaml
-  - udm-vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.1/tasks/vouch.yaml
-  - udm-publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.1/tasks/publish.yaml
+  - udm-setup: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.2/tasks/setup.yaml
+  - udm-olm: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.2/tasks/olm.yaml
+  - udm-attest: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.2/tasks/attest.yaml
+  - udm-scan: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.2/tasks/scan.yaml
+  - udm-build: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.2/tasks/build.yaml
+  - udm-vouch: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.2/tasks/vouch.yaml
+  - udm-publish: https://raw.githubusercontent.com/defenseunicorns-udm/udm-common/v0.15.2/tasks/publish.yaml
 ```
 
 Consumers **must** define a `lint` task — `udm-attest:lint` calls it internally.
