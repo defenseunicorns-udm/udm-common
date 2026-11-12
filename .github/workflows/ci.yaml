@@ -98,7 +98,7 @@ jobs:
 
       - name: Vouch Zarf Package via OLM
         run: |
-          uds run vouch:package --no-progress \
+          uds run udm-vouch:package --no-progress \
             --with olm_cat="$CAT_HOST" \
             --with olm_org="${{ secrets.OLM_ORG }}" \
             --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
