@@ -41,6 +41,8 @@ tasks:
           linux: bash
           darwin: bash
         cmd: |
+          set -Eeuo pipefail
+          trap 'printf "ERROR: shell failed (exit %s, line %s). See output above.\n" "$?" "$LINENO" >&2' ERR
           # These settings:
           # -x Assume files exist (since some scripts run on VMs)
           # -e SC2016 Ignore unexpanded env vars (since sometimes we want to dynamically add a var to something like .bashrc)
@@ -130,12 +132,15 @@ tasks:
   - name: test
     description: Run integration tests for all locally executable tasks
     actions:
+      - description: Test task authentication and failure propagation offline
+        cmd: python3 .github/tests/task-regressions.py
       - description: Test setup and scan tasks
         shell:
           linux: bash
           darwin: bash
         cmd: |
-          set -euo pipefail
+          set -Eeuo pipefail
+          trap 'printf "ERROR: test failed (exit %s, line %s). See output above.\n" "$?" "$LINENO" >&2' ERR
           export PATH="$HOME/.local/bin:$PATH"
 
           echo "==> Testing udm-setup:uds-cli"
@@ -203,8 +208,13 @@ tasks:
     description: Dry run all tasks in the base tasks file
     actions:
       - description: Dry run tasks
+        shell:
+          linux: bash
+          darwin: bash
         cmd: |
-          tasks=$(./uds run --list=md | tail -n +3 | awk -F '|' '{gsub("\\*\\*", "", $2); print $2}')
+          set -Eeuo pipefail
+          trap 'printf "ERROR: tasks failed (exit %s, line %s). See output above.\n" "$?" "$LINENO" >&2' ERR
+          tasks=$(uds run --list=md | tail -n +3 | awk -F '|' '{gsub("\\*\\*", "", $2); print $2}')
 
           # Loop through each command and execute with --dry-run
           for task in $tasks; do
@@ -245,8 +255,14 @@ tasks:
       olm_org:
         description: OLM organization name
         default: ""
+      olm_project:
+        description: CAT project name. For vouch, defaults to the Zarf package name; for Fulcio token generation, defaults to olm_org. Set explicitly when these differ.
+        default: ""
+      olm_cat_token:
+        description: CAT personal access token (cat_...) for CAT authentication instead of runner OIDC. Alternatively set OLM_CAT_TOKEN. Mutually exclusive with olm_identity_token / OLM_IDENTITY_TOKEN.
+        default: ""
       olm_identity_token:
-        description: OIDC identity token for CAT authentication. Required in GitLab CI — set via id_tokens with aud=cat and pass $OLM_ID_TOKEN. Leave empty for GitHub Actions (auto-detected).
+        description: OIDC identity token for CAT authentication. For GitLab runner OIDC, request id_tokens with aud=cat and pass $OLM_ID_TOKEN. Leave empty when using a CAT token or GitHub Actions ambient OIDC. Alternatively set OLM_IDENTITY_TOKEN.
         default: ""
       zarf_path:
         description: Path to the directory containing zarf.yaml
@@ -273,7 +289,8 @@ tasks:
           linux: bash
           darwin: bash
         cmd: |
-          set -euo pipefail
+          set -Eeuo pipefail
+          trap 'printf "ERROR: scan-and-vouch failed (exit %s, line %s). See output above.\n" "$?" "$LINENO" >&2' ERR
           trap 'rm -f .fulcio-token' EXIT
           export PATH="$HOME/.local/bin:$PATH"
 
@@ -283,15 +300,25 @@ tasks:
           ZARF_FLAVOR="${{ .inputs.zarf_flavor }}"
           OLM_CAT="${{ .inputs.olm_cat }}"
           OLM_ORG="${{ .inputs.olm_org }}"
-          OLM_IDENTITY_TOKEN="${{ .inputs.olm_identity_token }}"
+          OLM_PROJECT="${{ .inputs.olm_project }}"
+          # Pass credentials through the environment so nested tasks keep the
+          # same auth mode without adding secrets to command arguments.
+          OLM_CAT_TOKEN_INPUT="${{ .inputs.olm_cat_token }}"
+          OLM_IDENTITY_TOKEN_INPUT="${{ .inputs.olm_identity_token }}"
+          export OLM_CAT_TOKEN="${OLM_CAT_TOKEN_INPUT:-${OLM_CAT_TOKEN:-}}"
+          export OLM_IDENTITY_TOKEN="${OLM_IDENTITY_TOKEN_INPUT:-${OLM_IDENTITY_TOKEN:-}}"
+          if [ -n "$OLM_CAT_TOKEN" ] && [ -n "$OLM_IDENTITY_TOKEN" ]; then
+            echo "ERROR: CAT token and identity token are mutually exclusive. Set only one of olm_cat_token / OLM_CAT_TOKEN or olm_identity_token / OLM_IDENTITY_TOKEN." >&2
+            exit 1
+          fi
 
           if [ -n "$OLM_CAT" ] && [ -n "$OLM_ORG" ]; then
             FULCIO_ARGS=(
               --with olm_cat="$OLM_CAT"
               --with olm_org="$OLM_ORG"
+              --with olm_project="$OLM_PROJECT"
               --with github_token="${{ .inputs.github_token }}"
             )
-            [ -n "$OLM_IDENTITY_TOKEN" ] && FULCIO_ARGS+=(--with olm_identity_token="$OLM_IDENTITY_TOKEN")
             uds run udm-olm:generate-fulcio-token "${FULCIO_ARGS[@]}"
           fi
 
@@ -352,6 +379,7 @@ tasks:
             --with test_directory="${{ .inputs.test_directory }}"
             --with olm_cat="$OLM_CAT"
             --with olm_org="$OLM_ORG"
+            --with olm_project="$OLM_PROJECT"
             --with attestations="${ALL_EXTRA}"
             --with sarif_files="${SARIF_FILES}"
           )
@@ -370,7 +398,7 @@ tasks:
         description: Whether to run OpenGrep SAST. Set to 'false' to skip.
         default: "true"
       witness_key_path:
-        description: Path to a local signing key for Witness. Leave empty to auto-generate an ephemeral key for local runs.
+        description: Path to a local signing key for Witness. Leave empty for CAT Fulcio signing when olm_cat is set, or an ephemeral key for local runs without CAT.
         default: ""
       witness_workingdir:
         description: Directory for Witness to run attested commands from.
@@ -390,8 +418,14 @@ tasks:
       olm_org:
         description: OLM organization name
         default: ""
+      olm_project:
+        description: CAT project name. For vouch, defaults to the Zarf package name; for Fulcio token generation, defaults to olm_org. Set explicitly when these differ.
+        default: ""
+      olm_cat_token:
+        description: CAT personal access token (cat_...) for CAT authentication instead of runner OIDC. Alternatively set OLM_CAT_TOKEN. Mutually exclusive with olm_identity_token / OLM_IDENTITY_TOKEN.
+        default: ""
       olm_identity_token:
-        description: OIDC identity token for CAT authentication. Required in GitLab CI — set via id_tokens with aud=cat and pass $OLM_ID_TOKEN. Leave empty for GitHub Actions (auto-detected).
+        description: OIDC identity token for CAT authentication. For GitLab runner OIDC, request id_tokens with aud=cat and pass $OLM_ID_TOKEN. Leave empty when using a CAT token or GitHub Actions ambient OIDC. Alternatively set OLM_IDENTITY_TOKEN.
         default: ""
       registry:
         description: OCI registry to publish to
@@ -427,7 +461,8 @@ tasks:
           linux: bash
           darwin: bash
         cmd: |
-          set -euo pipefail
+          set -Eeuo pipefail
+          trap 'printf "ERROR: pipeline failed (exit %s, line %s). See output above.\n" "$?" "$LINENO" >&2' ERR
           trap 'rm -f .fulcio-token' EXIT
           export PATH="$HOME/.local/bin:$PATH"
 
@@ -435,9 +470,19 @@ tasks:
           ZARF_FLAVOR="${{ .inputs.zarf_flavor }}"
           OLM_CAT="${{ .inputs.olm_cat }}"
           OLM_ORG="${{ .inputs.olm_org }}"
-          OLM_IDENTITY_TOKEN="${{ .inputs.olm_identity_token }}"
+          OLM_PROJECT="${{ .inputs.olm_project }}"
+          # Pass credentials through the environment so nested tasks keep the
+          # same auth mode without adding secrets to command arguments.
+          OLM_CAT_TOKEN_INPUT="${{ .inputs.olm_cat_token }}"
+          OLM_IDENTITY_TOKEN_INPUT="${{ .inputs.olm_identity_token }}"
+          export OLM_CAT_TOKEN="${OLM_CAT_TOKEN_INPUT:-${OLM_CAT_TOKEN:-}}"
+          export OLM_IDENTITY_TOKEN="${OLM_IDENTITY_TOKEN_INPUT:-${OLM_IDENTITY_TOKEN:-}}"
+          if [ -n "$OLM_CAT_TOKEN" ] && [ -n "$OLM_IDENTITY_TOKEN" ]; then
+            echo "ERROR: CAT token and identity token are mutually exclusive. Set only one of olm_cat_token / OLM_CAT_TOKEN or olm_identity_token / OLM_IDENTITY_TOKEN." >&2
+            exit 1
+          fi
           EPHEMERAL_KEY=""
-          if [ -z "$WITNESS_KEY_PATH" ]; then
+          if [ -z "$WITNESS_KEY_PATH" ] && [ -z "$OLM_CAT" ]; then
             EPHEMERAL_KEY=$(mktemp /tmp/ephemeral-XXXXXX.pem)
             openssl genpkey -algorithm ED25519 -out "$EPHEMERAL_KEY" 2>/dev/null
             WITNESS_KEY_PATH="$EPHEMERAL_KEY"
@@ -447,9 +492,9 @@ tasks:
             FULCIO_ARGS=(
               --with olm_cat="$OLM_CAT"
               --with olm_org="$OLM_ORG"
+              --with olm_project="$OLM_PROJECT"
               --with github_token="${{ .inputs.github_token }}"
             )
-            [ -n "$OLM_IDENTITY_TOKEN" ] && FULCIO_ARGS+=(--with olm_identity_token="$OLM_IDENTITY_TOKEN")
             uds run udm-olm:generate-fulcio-token "${FULCIO_ARGS[@]}"
           fi
 
@@ -469,7 +514,7 @@ tasks:
             --with github_token="${{ .inputs.github_token }}"
             --with olm_cat="$OLM_CAT"
             --with olm_org="$OLM_ORG"
-            --with olm_identity_token="$OLM_IDENTITY_TOKEN"
+            --with olm_project="$OLM_PROJECT"
             --with zarf_path="${{ .inputs.zarf_path }}"
             --with architecture="${{ .inputs.architecture }}"
             --with test_directory="${{ .inputs.test_directory }}"

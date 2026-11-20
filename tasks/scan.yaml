@@ -14,6 +14,8 @@ tasks:
           linux: bash
           darwin: bash
         cmd: |
+          set -Eeuo pipefail
+          trap 'printf "ERROR: udm-scan:install-gitleaks failed (exit %s, line %s). See output above.\n" "$?" "$LINENO" >&2' ERR
           get_os() {
             case "$(uname -s)" in
               Linux)  echo "linux" ;;
@@ -33,7 +35,7 @@ tasks:
             local tmp
             tmp="$(mktemp -d)"
             # shellcheck disable=SC2064
-            trap "rm -rf '$tmp'" RETURN
+            trap "rm -rf '$tmp'" EXIT
             curl -fSL "$url" | tar -xz -C "$tmp" "$inner"
             mkdir -p "$HOME/.local/bin"
             mv "$tmp/$inner" "$HOME/.local/bin/$name"
@@ -63,6 +65,8 @@ tasks:
           linux: bash
           darwin: bash
         cmd: |
+          set -Eeuo pipefail
+          trap 'printf "ERROR: udm-scan:install-opengrep failed (exit %s, line %s). See output above.\n" "$?" "$LINENO" >&2' ERR
           get_os() {
             case "$(uname -s)" in
               Linux)  echo "linux" ;;
@@ -126,7 +130,8 @@ tasks:
           linux: bash
           darwin: bash
         cmd: |
-          set -euo pipefail
+          set -Eeuo pipefail
+          trap 'printf "ERROR: udm-scan:gitleaks failed (exit %s, line %s). See output above.\n" "$?" "$LINENO" >&2' ERR
           export PATH="$HOME/.local/bin:$PATH"
 
           GITLEAKS_SCAN_PATH="${{ .inputs.gitleaks_scan_path }}"
@@ -259,7 +264,8 @@ tasks:
           linux: bash
           darwin: bash
         cmd: |
-          set -euo pipefail
+          set -Eeuo pipefail
+          trap 'printf "ERROR: udm-scan:opengrep failed (exit %s, line %s). See output above.\n" "$?" "$LINENO" >&2' ERR
           export PATH="$HOME/.local/bin:$PATH"
 
           OS="$(uname -s)"

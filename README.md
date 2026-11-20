@@ -220,7 +220,7 @@ uds run udm-vouch:package \
   --with uds_bundle="uds-bundle.yaml"
 ```
 
-**GitLab CI** — also pass `olm_identity_token`:
+**GitLab CI with runner OIDC** — also pass `olm_identity_token` (CAT-token mode is described under [CI Provider Configuration](#ci-provider-configuration)):
 
 ```shell
 uds run udm-vouch:package \
@@ -344,9 +344,47 @@ All Witness attestation signing uses `fulcio.uds-mil.us` via a CAT-brokered toke
 
 On **GitHub Actions**, OLM auto-detects the GitHub OIDC token — no extra configuration needed beyond `id-token: write` on the job.
 
+### Using a CAT token instead of runner OIDC
+
+Store your CAT personal access token (`cat_...`) as a masked CI variable named
+`OLM_CAT_TOKEN`. OLM uses it for both Fulcio token generation and vouching,
+including inside `scan-and-vouch` and `pipeline`. No GitLab `id_tokens` block or
+GitHub `id-token: write` permission is needed for this mode.
+
+```bash
+# OLM_CAT_TOKEN is already supplied by your CI secret configuration.
+uds run udm-olm:generate-fulcio-token \
+  --with olm_cat="cat-api.uds-mil.us" \
+  --with olm_org="<your-org>" \
+  --with olm_project="<your-package-name>"
+uds run udm-attest:lint
+uds run udm-scan:security
+uds run udm-build:zarf-package
+uds run udm-vouch:package \
+  --with olm_cat="cat-api.uds-mil.us" \
+  --with olm_org="<your-org>" \
+  --with olm_project="<your-package-name>" \
+  --with attestations="lint-witness.json,gitleaks-witness.json,opengrep-witness.json,zarf-create-witness.json" \
+  --with sarif_files="gitleaks.sarif.json,opengrep.sarif.json"
+```
+
+Use the same `olm_project` for token generation and vouching. Token generation
+defaults to `olm_org`; vouch defaults to the package name from `zarf.yaml`.
+Refresh `.fulcio-token` before signing steps in long jobs, and generate it
+separately in each job.
+
+The four tasks that authenticate to CAT (`udm-olm:generate-fulcio-token`,
+`udm-vouch:package`, `scan-and-vouch`, and `pipeline`) also accept
+`--with olm_cat_token=...`. Prefer the environment variable to keep credentials
+out of command arguments and task dry-run output. CAT and explicit identity
+tokens are mutually exclusive: remove `olm_identity_token` arguments and unset
+`OLM_IDENTITY_TOKEN` when switching to CAT tokens. Witness still consumes the
+short-lived `.fulcio-token`; do not put the long-lived CAT token in that file.
+Registry publishing continues to require separate registry credentials.
+
 ### Configuring Fulcio signing for GitLab CI
 
-GitLab requires OIDC tokens to be explicitly requested via `id_tokens`. Request a token with audience `cat` and pass it to `udm-olm:generate-fulcio-token` as `olm_identity_token`. Each job that runs Witness-attested steps must generate its own token — `.fulcio-token` is gitignored and is not shared between jobs.
+When using runner OIDC, GitLab requires tokens to be explicitly requested via `id_tokens`. Request a token with audience `cat` and pass it to `udm-olm:generate-fulcio-token` as `olm_identity_token`. Each job that runs Witness-attested steps must generate its own token — `.fulcio-token` is gitignored and is not shared between jobs.
 
 ```yaml
 # .gitlab-ci.yml — CAT token request (add to every job that signs with Witness)
@@ -390,6 +428,23 @@ publish:
 ```
 
 See [`examples/.gitlab-ci.yml`](examples/.gitlab-ci.yml) for a complete annotated pipeline.
+
+### Diagnosing task failures
+
+Multiline tasks fail on command or pipeline errors and report the task name,
+exit status, and shell line number. OLM token-exchange stderr remains visible.
+Failed token refreshes remove the previous `.fulcio-token` so subsequent steps
+cannot accidentally reuse it.
+
+UDS CLI v0.41.0 can report `timed out after 0 seconds` for an ordinary command
+failure. Check the preceding tool output and `ERROR: <task> failed (exit ...` line
+for the cause. For Fulcio's `There was an error processing the identity token`,
+check token freshness, the CAT/Fulcio environment pairing, and Fulcio server logs;
+this error alone does not establish a network outage.
+
+Run offline auth and error-propagation regressions with
+`python3 .github/tests/task-regressions.py` (requires Python 3 and UDS CLI).
+`uds run test` includes these checks before the tool integration tests.
 
 ## Lint Task
 

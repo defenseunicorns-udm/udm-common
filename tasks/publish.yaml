@@ -29,7 +29,8 @@ tasks:
           linux: bash
           darwin: bash
         cmd: |
-          set -euo pipefail
+          set -Eeuo pipefail
+          trap 'printf "ERROR: udm-publish:zarf-package failed (exit %s, line %s). See output above.\n" "$?" "$LINENO" >&2' ERR
           export PATH="$HOME/.local/bin:$PATH"
 
           REGISTRY="${{ .inputs.registry }}"

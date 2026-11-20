@@ -20,8 +20,14 @@ tasks:
       olm_org:
         description: OLM organization name
         default: ""
+      olm_project:
+        description: CAT project name. Defaults to the Zarf package name when empty. Use the same project when generating a Fulcio token.
+        default: ""
+      olm_cat_token:
+        description: CAT personal access token (cat_...) for CAT authentication instead of runner OIDC. Alternatively set OLM_CAT_TOKEN. Mutually exclusive with olm_identity_token / OLM_IDENTITY_TOKEN.
+        default: ""
       olm_identity_token:
-        description: OIDC identity token for OLM CAT authentication. In GitLab CI, set via id_tokens with aud=cat and pass $OLM_ID_TOKEN. Leave empty for interactive device flow (local use).
+        description: OIDC identity token for CAT authentication. For GitLab runner OIDC, request id_tokens with aud=cat and pass $OLM_ID_TOKEN. Alternatively set OLM_IDENTITY_TOKEN. Leave empty for CAT-token, GitHub ambient OIDC, or interactive auth.
         default: ""
       test_directory:
         description: Path to the test directory to pass to olm vouch. Leave empty to skip.
@@ -35,7 +41,8 @@ tasks:
           linux: bash
           darwin: bash
         cmd: |
-          set -euo pipefail
+          set -Eeuo pipefail
+          trap 'printf "ERROR: udm-vouch:package failed (exit %s, line %s). See output above.\n" "$?" "$LINENO" >&2' ERR
           export PATH="$HOME/.local/bin:$PATH"
 
           ATTESTATIONS="${{ .inputs.attestations }}"
@@ -43,6 +50,7 @@ tasks:
           TEST_DIRECTORY="${{ .inputs.test_directory }}"
           OLM_CAT="${{ .inputs.olm_cat }}"
           OLM_ORG="${{ .inputs.olm_org }}"
+          OLM_PROJECT="${{ .inputs.olm_project }}"
 
           PACKAGE="${{ .inputs.zarf_package }}"
           if [ -z "$PACKAGE" ]; then
@@ -100,14 +108,23 @@ tasks:
             done
           fi
 
-          OLM_IDENTITY_TOKEN="${{ .inputs.olm_identity_token }}"
+          # Pass credentials through the environment so nested tasks keep the
+          # same auth mode without adding secrets to command arguments.
+          OLM_CAT_TOKEN_INPUT="${{ .inputs.olm_cat_token }}"
+          OLM_IDENTITY_TOKEN_INPUT="${{ .inputs.olm_identity_token }}"
+          export OLM_CAT_TOKEN="${OLM_CAT_TOKEN_INPUT:-${OLM_CAT_TOKEN:-}}"
+          export OLM_IDENTITY_TOKEN="${OLM_IDENTITY_TOKEN_INPUT:-${OLM_IDENTITY_TOKEN:-}}"
+          if [ -n "$OLM_CAT_TOKEN" ] && [ -n "$OLM_IDENTITY_TOKEN" ]; then
+            echo "ERROR: CAT token and identity token are mutually exclusive. Set only one of olm_cat_token / OLM_CAT_TOKEN or olm_identity_token / OLM_IDENTITY_TOKEN." >&2
+            exit 1
+          fi
 
           OLM_ARGS=()
           if [ -n "$OLM_CAT" ]; then
             OLM_ARGS+=(--cat "$OLM_CAT")
           fi
-          if [ -n "$OLM_IDENTITY_TOKEN" ]; then
-            OLM_ARGS+=(--identity-token "$OLM_IDENTITY_TOKEN")
+          if [ -n "$OLM_PROJECT" ]; then
+            OLM_ARGS+=(--project "$OLM_PROJECT")
           fi
           if [ -n "$OLM_ORG" ]; then
             OLM_ARGS+=(--org "$OLM_ORG")

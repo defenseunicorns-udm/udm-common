@@ -13,6 +13,12 @@
 # Each job that runs Witness-attested steps must generate its own .fulcio-token
 # via udm-olm:generate-fulcio-token before those steps run.
 #
+# CAT-token alternative: store a masked CI variable named OLM_CAT_TOKEN and
+# remove the id_tokens blocks and every --with olm_identity_token argument below.
+# Both token generation and vouch read OLM_CAT_TOKEN automatically. Pass the same
+# --with olm_project=<package-name> to both when package name differs from org.
+# Registry credentials remain separate from CAT authentication.
+#
 # Project-specific values from enxo/oootp are called out inline. Replace them
 # before copying this file into another project.
 

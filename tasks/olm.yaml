@@ -16,7 +16,8 @@ tasks:
           linux: bash
           darwin: bash
         cmd: |
-          set -euo pipefail
+          set -Eeuo pipefail
+          trap 'printf "ERROR: udm-olm:setup failed (exit %s, line %s). See output above.\n" "$?" "$LINENO" >&2' ERR
           export PATH="$HOME/.local/bin:$PATH"
 
           VERSION="${{ .inputs.version }}"
@@ -78,8 +79,11 @@ tasks:
       olm_project:
         description: OLM project name. Defaults to olm_org when empty. Override for orgs where project name differs from org name.
         default: ""
+      olm_cat_token:
+        description: CAT personal access token (cat_...) for CAT authentication instead of runner OIDC. Alternatively set OLM_CAT_TOKEN. Mutually exclusive with olm_identity_token / OLM_IDENTITY_TOKEN.
+        default: ""
       olm_identity_token:
-        description: OIDC identity token for CAT authentication. In GitLab CI, set via id_tokens with aud=cat and pass $OLM_ID_TOKEN. Leave empty for GitHub Actions (auto-detected) or interactive device flow (local use).
+        description: OIDC identity token for CAT authentication. For GitLab runner OIDC, request id_tokens with aud=cat and pass $OLM_ID_TOKEN. Alternatively set OLM_IDENTITY_TOKEN. Leave empty for CAT-token, GitHub ambient OIDC, or interactive auth.
         default: ""
       github_token:
         description: GitHub token for GHCR authentication when installing OLM CLI. Leave empty locally.
@@ -90,13 +94,26 @@ tasks:
           linux: bash
           darwin: bash
         cmd: |
-          set -euo pipefail
+          set -Eeuo pipefail
+          trap 'printf "ERROR: udm-olm:generate-fulcio-token failed (exit %s, line %s). See output above.\n" "$?" "$LINENO" >&2' ERR
           export PATH="$HOME/.local/bin:$PATH"
 
           OLM_CAT="${{ .inputs.olm_cat }}"
           OLM_ORG="${{ .inputs.olm_org }}"
           OLM_PROJECT="${{ .inputs.olm_project }}"
-          OLM_IDENTITY_TOKEN="${{ .inputs.olm_identity_token }}"
+          # Invalidate old signing credentials even when auth validation fails.
+          rm -f .fulcio-token
+
+          # Pass credentials through the environment so nested tasks keep the
+          # same auth mode without adding secrets to command arguments.
+          OLM_CAT_TOKEN_INPUT="${{ .inputs.olm_cat_token }}"
+          OLM_IDENTITY_TOKEN_INPUT="${{ .inputs.olm_identity_token }}"
+          export OLM_CAT_TOKEN="${OLM_CAT_TOKEN_INPUT:-${OLM_CAT_TOKEN:-}}"
+          export OLM_IDENTITY_TOKEN="${OLM_IDENTITY_TOKEN_INPUT:-${OLM_IDENTITY_TOKEN:-}}"
+          if [ -n "$OLM_CAT_TOKEN" ] && [ -n "$OLM_IDENTITY_TOKEN" ]; then
+            echo "ERROR: CAT token and identity token are mutually exclusive. Set only one of olm_cat_token / OLM_CAT_TOKEN or olm_identity_token / OLM_IDENTITY_TOKEN." >&2
+            exit 1
+          fi
 
           if [ -z "$OLM_CAT" ] || [ -z "$OLM_ORG" ]; then
             echo "olm_cat and olm_org are required to generate a Fulcio token."
@@ -112,11 +129,7 @@ tasks:
             --org "$OLM_ORG"
             --project "$OLM_PROJECT"
           )
-          if [ -n "$OLM_IDENTITY_TOKEN" ]; then
-            ARGS+=(--identity-token "$OLM_IDENTITY_TOKEN")
-          fi
-
-          TOKEN="$(./olm "${ARGS[@]}" 2>/dev/null)"
+          TOKEN="$(./olm "${ARGS[@]}")"
           TOKEN="$(echo "$TOKEN" | tr -d '[:space:]')"
           if [ -z "$TOKEN" ]; then
             echo "ERROR: olm generate-fulcio-token returned empty output"
